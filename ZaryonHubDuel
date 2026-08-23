@@ -1,17 +1,19 @@
--- ZaryonHub LocalScript (Roblox UI + Functions)
--- Colócalo en StarterPlayerScripts o ejecútalo desde tu ejecutor favorito.
+-- Roblox Lua Script: ZaryonHub (Completo y Dinámico)
+-- Colócalo en StarterPlayerScripts o ejecútalo mediante tu Executor de preferencia.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 local Stats = game:GetService("Stats")
+
 local LocalPlayer = Players.LocalPlayer
 
--- ====================================================================
--- CONFIGURACIÓN Y ESTADOS
--- ====================================================================
-local State = {
+-- ==========================================
+-- ESTADOS Y CONFIGURACIÓN GENERAL
+-- ==========================================
+local Settings = {
 	Speed = 59,
 	CarrySpeed = 29,
 	LaggerCarry = 24.5,
@@ -19,220 +21,196 @@ local State = {
 	AimbotSpeed = 45,
 	StealSpeed = 45,
 	POV = 90,
-	JumpMode = "Manual",
-	ActiveTab = "Speed",
+	JumpMode = "Manual", -- "Manual" o "Hold"
 	-- Toggles
 	AutoRight = false, AutoLeft = false, BatTP = false,
 	AntiBatBypass = false, DropBrainrot = false, AutoSteal = false,
-	UnWalk = false, InfinityJump = false, AntiRagdoll = false,
-	AntiLag = false, CarrySpeedActive = false, LaggerCarryActive = false,
-	LaggerSpeedActive = false
+	UnWalk = false, InfinityJump = false, AntiRagdoll = false, AntiLag = false,
+	-- Activo rápido
+	CarrySpeedActive = false, LaggerCarryActive = false, LaggerSpeedActive = false,
+	-- Progreso Auto Stealer
+	StealProgress = 0
+}
+
+local Keybinds = {
+	AutoRight = "E", AutoLeft = "R", BatTP = "B",
+	AntiBatBypass = "V", CarrySpeed = "C", LaggerCarry = "R",
+	LaggerSpeed = "T", DropBrainrot = "F", TPDown = "X", Reset = "Z"
 }
 
 local Theme = {
-	Background = Color3.fromRGB(12, 12, 12),
-	Accent = Color3.fromRGB(180, 180, 180),
-	Text = Color3.fromRGB(220, 220, 220),
-	TextDark = Color3.fromRGB(10, 10, 10),
-	ActiveBtn = Color3.fromRGB(240, 240, 240),
-	InactiveBtn = Color3.fromRGB(20, 20, 20)
+	Background = Color3.fromRGB(15, 15, 15),
+	Borders = Color3.fromRGB(150, 150, 150),
+	ButtonBg = Color3.fromRGB(0, 0, 0),
+	ButtonText = Color3.fromRGB(200, 200, 200)
 }
 
--- ====================================================================
--- ESTRUCTURA BASE DE LA INTERFAZ (UI)
--- ====================================================================
+-- ==========================================
+-- CREACIÓN DE LA UI PRINCIPAL
+-- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ZaryonHub_Dynamic"
+ScreenGui.Name = "ZaryonHub_Fix"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Botón lateral "Menú"
+-- Botón Menú Lateral
 local MenuBtn = Instance.new("TextButton")
 MenuBtn.Size = UDim2.new(0, 50, 0, 50)
 MenuBtn.Position = UDim2.new(0, 20, 0.5, -25)
-MenuBtn.BackgroundColor3 = Theme.InactiveBtn
-MenuBtn.TextColor3 = Theme.Text
+MenuBtn.BackgroundColor3 = Theme.ButtonBg
+MenuBtn.TextColor3 = Theme.ButtonText
 MenuBtn.Text = "Menú"
-MenuBtn.Font = Enum.Font.GothamBold
-MenuBtn.TextSize = 14
-MenuBtn.AutoButtonColor = false
+MenuBtn.Font = Enum.Font.SourceSansBold
+MenuBtn.TextSize = 16
 MenuBtn.Parent = ScreenGui
 
-Instance.new("UICorner", MenuBtn).CornerRadius = UDim.new(0, 8)
 local MenuStroke = Instance.new("UIStroke", MenuBtn)
-MenuStroke.Color = Theme.Accent
-MenuStroke.Thickness = 1.5
+MenuStroke.Color = Theme.Borders
 
--- Menú Principal CENTRADO
+-- Ventana Menú Principal (Centrada)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 440, 0, 320)
+MainFrame.Size = UDim2.new(0, 430, 0, 320)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Theme.Background
 MainFrame.Visible = false
-MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Color = Theme.Accent
-MainStroke.Thickness = 1.5
+MainStroke.Color = Theme.Borders
 
--- Título y División
+-- Título y Raya Separadora
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 40)
-Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Size = UDim2.new(1, -10, 0, 35)
+Title.Position = UDim2.new(0, 10, 0, 0)
 Title.Text = "ZaryonHub"
-Title.TextColor3 = Theme.Text
-Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Theme.ButtonText
+Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
 
 local TitleLine = Instance.new("Frame")
-TitleLine.Size = UDim2.new(1, 0, 0, 1)
-TitleLine.Position = UDim2.new(0, 0, 0, 40)
-TitleLine.BackgroundColor3 = Theme.Accent
+TitleLine.Size = UDim2.new(1, 0, 0, 2)
+TitleLine.Position = UDim2.new(0, 0, 0, 35)
+TitleLine.BackgroundColor3 = Theme.Borders
 TitleLine.BorderSizePixel = 0
 TitleLine.Parent = MainFrame
 
 -- Contenedores
-local NavContainer = Instance.new("Frame")
-NavContainer.Size = UDim2.new(0, 125, 1, -41)
-NavContainer.Position = UDim2.new(0, 0, 0, 41)
-NavContainer.BackgroundTransparency = 1
-NavContainer.Parent = MainFrame
+local NavFrame = Instance.new("Frame")
+NavFrame.Size = UDim2.new(0, 120, 1, -37)
+NavFrame.Position = UDim2.new(0, 0, 0, 37)
+NavFrame.BackgroundTransparency = 1
+NavFrame.Parent = MainFrame
 
-local ContentContainer = Instance.new("Frame")
-ContentContainer.Size = UDim2.new(1, -127, 1, -41)
-ContentContainer.Position = UDim2.new(0, 127, 0, 41)
-ContentContainer.BackgroundTransparency = 1
-ContentContainer.Parent = MainFrame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -122, 1, -37)
+ContentFrame.Position = UDim2.new(0, 122, 0, 37)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
 
-local VertDivider = Instance.new("Frame")
-VertDivider.Size = UDim2.new(0, 1, 1, -41)
-VertDivider.Position = UDim2.new(0, 126, 0, 41)
-VertDivider.BackgroundColor3 = Theme.Accent
-VertDivider.BorderSizePixel = 0
-VertDivider.Parent = MainFrame
+local VertLine = Instance.new("Frame")
+VertLine.Size = UDim2.new(0, 2, 1, -37)
+VertLine.Position = UDim2.new(0, 120, 0, 37)
+VertLine.BackgroundColor3 = Theme.Borders
+VertLine.BorderSizePixel = 0
+VertLine.Parent = MainFrame
 
--- ====================================================================
--- SISTEMA DE NAVEGACIÓN Y PESTAÑAS DINÁMICAS
--- ====================================================================
+-- Pestañas y Categorías
 local Categories = {"Speed", "Combat", "Steal", "Movement", "Misc", "Visual", "Interface", "Keybinds"}
-local Tabs, NavBtns = {}, {}
+local NavButtons, CategoryFrames = {}, {}
 
 for i, cat in ipairs(Categories) do
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0.88, 0, 0, 28)
-	btn.Position = UDim2.new(0.06, 0, 0, (i - 1) * 33 + 6)
-	btn.BackgroundColor3 = (cat == "Speed") and Theme.ActiveBtn or Theme.InactiveBtn
-	btn.TextColor3 = (cat == "Speed") and Theme.TextDark or Theme.Text
+	btn.Size = UDim2.new(0.9, 0, 0, 28)
+	btn.Position = UDim2.new(0.05, 0, 0, (i - 1) * 32 + 5)
+	btn.BackgroundColor3 = Theme.ButtonBg
+	btn.TextColor3 = Theme.ButtonText
 	btn.Text = cat
-	btn.Font = Enum.Font.GothamSemibold
-	btn.TextSize = 13
-	btn.AutoButtonColor = false
-	btn.Parent = NavContainer
+	btn.Font = Enum.Font.SourceSans
+	btn.TextSize = 15
+	btn.Parent = NavFrame
 	
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 	local stroke = Instance.new("UIStroke", btn)
-	stroke.Color = Theme.Accent
-	stroke.Thickness = 1
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	stroke.Enabled = (cat == "Speed")
 	
-	NavBtns[cat] = {Button = btn, Stroke = stroke}
+	NavButtons[cat] = {Btn = btn, Stroke = stroke}
 	
 	local page = Instance.new("ScrollingFrame")
-	page.Size = UDim2.new(1, -10, 1, -10)
-	page.Position = UDim2.new(0, 5, 0, 5)
+	page.Size = UDim2.new(1, 0, 1, 0)
 	page.BackgroundTransparency = 1
 	page.Visible = (cat == "Speed")
 	page.ScrollBarThickness = 3
-	page.Parent = ContentContainer
-	Tabs[cat] = page
+	page.Parent = ContentFrame
+	CategoryFrames[cat] = page
 	
 	btn.MouseButton1Click:Connect(function()
-		for name, p in pairs(Tabs) do p.Visible = (name == cat) end
-		for name, bData in pairs(NavBtns) do
-			local active = (name == cat)
-			TweenService:Create(bData.Button, TweenInfo.new(0.2), {
-				BackgroundColor3 = active and Theme.ActiveBtn or Theme.InactiveBtn,
-				TextColor3 = active and Theme.TextDark or Theme.Text
-			}):Play()
+		for _, cName in ipairs(Categories) do
+			CategoryFrames[cName].Visible = (cName == cat)
+			NavButtons[cName].Stroke.Enabled = (cName == cat)
 		end
 	end)
 end
 
--- Animación Abrir/Cerrar Menú
-local menuOpen = false
+-- Abrir / Cerrar Menú
+local menuActive = false
 MenuBtn.MouseButton1Click:Connect(function()
-	menuOpen = not menuOpen
-	if menuOpen then
-		MainFrame.Visible = true
-		MainFrame.Size = UDim2.new(0, 0, 0, 0)
-		TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0, 440, 0, 320)
-		}):Play()
-		TweenService:Create(MenuBtn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.ActiveBtn, TextColor3 = Theme.TextDark}):Play()
+	menuActive = not menuActive
+	MainFrame.Visible = menuActive
+	if menuActive then
+		MenuBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		MenuBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 	else
-		local tween = TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Size = UDim2.new(0, 0, 0, 0)
-		})
-		tween:Play()
-		tween.Completed:Connect(function() if not menuOpen then MainFrame.Visible = false end end)
-		TweenService:Create(MenuBtn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.InactiveBtn, TextColor3 = Theme.Text}):Play()
+		MenuBtn.BackgroundColor3 = Theme.ButtonBg
+		MenuBtn.TextColor3 = Theme.ButtonText
 	end
 end)
 
--- ====================================================================
--- COMPONENTES INTERACTIVOS (+ / -, Toggles Animados)
--- ====================================================================
-local function CreateNumberSetting(parent, titleText, defaultVal, yPos, callback)
+-- ==========================================
+-- COMPONENTES (Controles de Entrada y Toggles)
+-- ==========================================
+local function CreateNumberSetting(parent, text, defaultVal, yPos, callback)
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(0.5, 0, 0, 24)
-	label.Position = UDim2.new(0.02, 0, 0, yPos)
-	label.Text = titleText
-	label.TextColor3 = Theme.Text
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 13
+	label.Position = UDim2.new(0.05, 0, 0, yPos)
+	label.Text = text
+	label.TextColor3 = Theme.ButtonText
 	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 15
 	label.BackgroundTransparency = 1
 	label.Parent = parent
-
+	
 	local minus = Instance.new("TextButton")
 	minus.Size = UDim2.new(0, 22, 0, 22)
 	minus.Position = UDim2.new(0.55, 0, 0, yPos)
-	minus.BackgroundColor3 = Theme.InactiveBtn
-	minus.TextColor3 = Theme.Text
+	minus.BackgroundColor3 = Theme.ButtonBg
+	minus.TextColor3 = Theme.ButtonText
 	minus.Text = "-"
-	minus.Font = Enum.Font.GothamBold
 	minus.Parent = parent
-	Instance.new("UICorner", minus).CornerRadius = UDim.new(0, 4)
-	Instance.new("UIStroke", minus).Color = Theme.Accent
-
+	Instance.new("UIStroke", minus).Color = Theme.Borders
+	
 	local valBox = Instance.new("TextBox")
-	valBox.Size = UDim2.new(0, 38, 0, 22)
-	valBox.Position = UDim2.new(0.55, 26, 0, yPos)
+	valBox.Size = UDim2.new(0, 36, 0, 22)
+	valBox.Position = UDim2.new(0.55, 25, 0, yPos)
 	valBox.Text = tostring(defaultVal)
-	valBox.TextColor3 = Theme.Text
-	valBox.Font = Enum.Font.GothamSemibold
-	valBox.TextSize = 12
-	valBox.BackgroundColor3 = Theme.InactiveBtn
+	valBox.TextColor3 = Theme.ButtonText
+	valBox.BackgroundColor3 = Theme.ButtonBg
 	valBox.Parent = parent
-	Instance.new("UICorner", valBox).CornerRadius = UDim.new(0, 4)
-	Instance.new("UIStroke", valBox).Color = Theme.Accent
-
+	Instance.new("UIStroke", valBox).Color = Theme.Borders
+	
 	local plus = Instance.new("TextButton")
 	plus.Size = UDim2.new(0, 22, 0, 22)
-	plus.Position = UDim2.new(0.55, 68, 0, yPos)
-	plus.BackgroundColor3 = Theme.InactiveBtn
-	plus.TextColor3 = Theme.Text
+	plus.Position = UDim2.new(0.55, 64, 0, yPos)
+	plus.BackgroundColor3 = Theme.ButtonBg
+	plus.TextColor3 = Theme.ButtonText
 	plus.Text = "+"
-	plus.Font = Enum.Font.GothamBold
 	plus.Parent = parent
-	Instance.new("UICorner", plus).CornerRadius = UDim.new(0, 4)
-	Instance.new("UIStroke", plus).Color = Theme.Accent
-
+	Instance.new("UIStroke", plus).Color = Theme.Borders
+	
 	local val = defaultVal
 	local function update(n)
 		val = math.max(0, n)
@@ -245,203 +223,445 @@ local function CreateNumberSetting(parent, titleText, defaultVal, yPos, callback
 	valBox.FocusLost:Connect(function() update(tonumber(valBox.Text) or val) end)
 end
 
-local function CreateToggle(parent, titleText, yPos, callback)
+local function CreateToggle(parent, text, yPos, callback)
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(0.5, 0, 0, 24)
-	label.Position = UDim2.new(0.02, 0, 0, yPos)
-	label.Text = titleText
-	label.TextColor3 = Theme.Text
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 13
+	label.Position = UDim2.new(0.05, 0, 0, yPos)
+	label.Text = text
+	label.TextColor3 = Theme.ButtonText
 	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 15
 	label.BackgroundTransparency = 1
 	label.Parent = parent
 
 	local oval = Instance.new("TextButton")
 	oval.Size = UDim2.new(0, 42, 0, 20)
 	oval.Position = UDim2.new(0.72, 0, 0, yPos + 2)
-	oval.BackgroundColor3 = Theme.InactiveBtn
+	oval.BackgroundColor3 = Theme.ButtonBg
 	oval.Text = ""
-	oval.AutoButtonColor = false
 	oval.Parent = parent
 	
 	Instance.new("UICorner", oval).CornerRadius = UDim.new(1, 0)
-	Instance.new("UIStroke", oval).Color = Theme.Accent
+	Instance.new("UIStroke", oval).Color = Theme.Borders
 
 	local circle = Instance.new("Frame")
 	circle.Size = UDim2.new(0, 16, 0, 16)
-	circle.Position = UDim2.new(1, -18, 0, 2) -- Inactivo derecha
-	circle.BackgroundColor3 = Theme.Text
+	circle.Position = UDim2.new(1, -18, 0, 2)
+	circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	circle.Parent = oval
 	Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
 
-	local toggled = false
+	local active = false
 	oval.MouseButton1Click:Connect(function()
-		toggled = not toggled
-		TweenService:Create(circle, TweenInfo.new(0.15), {
-			Position = toggled and UDim2.new(0, 2, 0, 2) or UDim2.new(1, -18, 0, 2),
-			BackgroundColor3 = toggled and Theme.TextDark or Theme.Text
-		}):Play()
-		TweenService:Create(oval, TweenInfo.new(0.15), {
-			BackgroundColor3 = toggled and Theme.ActiveBtn or Theme.InactiveBtn
-		}):Play()
-		callback(toggled)
+		active = not active
+		if active then
+			circle:TweenPosition(UDim2.new(0, 2, 0, 2), "Out", "Quad", 0.12, true)
+			oval.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			circle.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		else
+			circle:TweenPosition(UDim2.new(1, -18, 0, 2), "Out", "Quad", 0.12, true)
+			oval.BackgroundColor3 = Theme.ButtonBg
+			circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		end
+		callback(active)
 	end)
 end
 
--- Rellenar Opciones en Submenús
-CreateNumberSetting(Tabs["Speed"], "Speed", 59, 10, function(v) State.Speed = v end)
-CreateNumberSetting(Tabs["Speed"], "Carry Speed", 29, 40, function(v) State.CarrySpeed = v end)
-CreateNumberSetting(Tabs["Speed"], "Lagger Carry", 24.5, 70, function(v) State.LaggerCarry = v end)
-CreateNumberSetting(Tabs["Speed"], "Lagger Speed", 15, 100, function(v) State.LaggerSpeed = v end)
-CreateNumberSetting(Tabs["Speed"], "Aimbot Speed", 45, 130, function(v) State.AimbotSpeed = v end)
+-- ==========================================
+-- RELLENO DE OPCIONES POR CATEGORÍA
+-- ==========================================
 
-CreateToggle(Tabs["Combat"], "Auto Right", 10, function(s) State.AutoRight = s end)
-CreateToggle(Tabs["Combat"], "Auto Left", 40, function(s) State.AutoLeft = s end)
-CreateToggle(Tabs["Combat"], "Bat TP", 70, function(s) State.BatTP = s end)
-CreateToggle(Tabs["Combat"], "Auto Bat Bypass", 100, function(s) State.AntiBatBypass = s end)
-CreateToggle(Tabs["Combat"], "Drop Brainrot", 130, function(s) State.DropBrainrot = s end)
+-- SPEED
+CreateNumberSetting(CategoryFrames["Speed"], "Speed", 59, 10, function(v) Settings.Speed = v end)
+CreateNumberSetting(CategoryFrames["Speed"], "Carry Speed", 29, 40, function(v) Settings.CarrySpeed = v end)
+CreateNumberSetting(CategoryFrames["Speed"], "Lagger Carry", 24.5, 70, function(v) Settings.LaggerCarry = v end)
+CreateNumberSetting(CategoryFrames["Speed"], "Lagger Speed", 15, 100, function(v) Settings.LaggerSpeed = v end)
+CreateNumberSetting(CategoryFrames["Speed"], "Aimbot Speed", 45, 130, function(v) Settings.AimbotSpeed = v end)
 
-CreateNumberSetting(Tabs["Steal"], "Steal Speed", 45, 10, function(v) State.StealSpeed = v end)
-CreateToggle(Tabs["Steal"], "Auto Steal", 40, function(s) State.AutoSteal = s end)
+-- COMBAT
+CreateToggle(CategoryFrames["Combat"], "Auto Right", 10, function(s) Settings.AutoRight = s end)
+CreateToggle(CategoryFrames["Combat"], "Auto Left", 40, function(s) Settings.AutoLeft = s end)
+CreateToggle(CategoryFrames["Combat"], "Bat TP", 70, function(s) Settings.BatTP = s end)
+CreateToggle(CategoryFrames["Combat"], "Auto Bat Bypass", 100, function(s) Settings.AntiBatBypass = s end)
+CreateToggle(CategoryFrames["Combat"], "Drop Brainrot", 130, function(s) Settings.DropBrainrot = s end)
 
-CreateToggle(Tabs["Movement"], "UnWalk", 10, function(s) State.UnWalk = s end)
-CreateToggle(Tabs["Misc"], "Infinity Jump", 10, function(s) State.InfinityJump = s end)
-CreateToggle(Tabs["Misc"], "Anti Ragdoll", 40, function(s) State.AntiRagdoll = s end)
-CreateToggle(Tabs["Visual"], "Anti Lag", 10, function(s) State.AntiLag = s end)
-CreateNumberSetting(Tabs["Visual"], "POV", 90, 40, function(v) workspace.CurrentCamera.FieldOfView = v end)
+-- STEAL
+CreateNumberSetting(CategoryFrames["Steal"], "Steal Speed", 45, 10, function(v) Settings.StealSpeed = v end)
+CreateToggle(CategoryFrames["Steal"], "Auto Steal", 40, function(s) Settings.AutoSteal = s end)
 
--- ====================================================================
--- BOTONES DE ACCIÓN RÁPIDA (DERECHA - SIN SILUETA)
--- ====================================================================
-local RightContainer = Instance.new("Frame")
-RightContainer.Size = UDim2.new(0, 180, 0, 220)
-RightContainer.Position = UDim2.new(1, -190, 0.5, -110)
-RightContainer.BackgroundTransparency = 1
-RightContainer.Parent = ScreenGui
+-- MOVEMENT (UnWalk & Jump Manual/Hold)
+CreateToggle(CategoryFrames["Movement"], "UnWalk", 10, function(s) Settings.UnWalk = s end)
 
-local quickLayout = {
-	{Name = "Bat TP", Pos = Vector2.new(0, 0)},
-	{Name = "Auto Left", Pos = Vector2.new(60, 0)},
-	{Name = "Auto Right", Pos = Vector2.new(120, 0)},
-	{Name = "TP Down", Pos = Vector2.new(60, 50)},
-	{Name = "Carry Speed", Pos = Vector2.new(120, 50)},
-	{Name = "Anti Bat Bypass", Pos = Vector2.new(60, 100)},
-	{Name = "Lagger Carry", Pos = Vector2.new(120, 100)},
-	{Name = "Reset", Pos = Vector2.new(60, 150)},
-	{Name = "Lagger Speed", Pos = Vector2.new(120, 150)}
+local JumpLabel = Instance.new("TextLabel")
+JumpLabel.Size = UDim2.new(0.3, 0, 0, 24)
+JumpLabel.Position = UDim2.new(0.05, 0, 0, 40)
+JumpLabel.Text = "Jump"
+JumpLabel.TextColor3 = Theme.ButtonText
+JumpLabel.TextXAlignment = Enum.TextXAlignment.Left
+JumpLabel.Font = Enum.Font.SourceSans
+JumpLabel.TextSize = 15
+JumpLabel.BackgroundTransparency = 1
+JumpLabel.Parent = CategoryFrames["Movement"]
+
+local JumpContainer = Instance.new("Frame")
+JumpContainer.Size = UDim2.new(0, 110, 0, 22)
+JumpContainer.Position = UDim2.new(0.45, 0, 0, 40)
+JumpContainer.BackgroundColor3 = Theme.ButtonBg
+JumpContainer.Parent = CategoryFrames["Movement"]
+Instance.new("UIStroke", JumpContainer).Color = Theme.Borders
+
+local ManualBtn = Instance.new("TextButton")
+ManualBtn.Size = UDim2.new(0.5, 0, 1, 0)
+ManualBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ManualBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+ManualBtn.Text = "Manual"
+ManualBtn.Font = Enum.Font.SourceSans
+ManualBtn.Parent = JumpContainer
+
+local HoldBtn = Instance.new("TextButton")
+HoldBtn.Size = UDim2.new(0.5, 0, 1, 0)
+HoldBtn.Position = UDim2.new(0.5, 0, 0, 0)
+HoldBtn.BackgroundColor3 = Theme.ButtonBg
+HoldBtn.TextColor3 = Theme.ButtonText
+HoldBtn.Text = "Hold"
+HoldBtn.Font = Enum.Font.SourceSans
+HoldBtn.Parent = JumpContainer
+
+ManualBtn.MouseButton1Click:Connect(function()
+	Settings.JumpMode = "Manual"
+	ManualBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	ManualBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+	HoldBtn.BackgroundColor3 = Theme.ButtonBg
+	HoldBtn.TextColor3 = Theme.ButtonText
+end)
+
+HoldBtn.MouseButton1Click:Connect(function()
+	Settings.JumpMode = "Hold"
+	HoldBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	HoldBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+	ManualBtn.BackgroundColor3 = Theme.ButtonBg
+	ManualBtn.TextColor3 = Theme.ButtonText
+end)
+
+-- MISC
+CreateToggle(CategoryFrames["Misc"], "Infinity Jump", 10, function(s) Settings.InfinityJump = s end)
+CreateToggle(CategoryFrames["Misc"], "Anti Ragdoll", 40, function(s) Settings.AntiRagdoll = s end)
+
+-- VISUAL
+CreateToggle(CategoryFrames["Visual"], "Anti Lag", 10, function(s) Settings.AntiLag = s end)
+CreateNumberSetting(CategoryFrames["Visual"], "POV", 90, 40, function(v) workspace.CurrentCamera.FieldOfView = v end)
+
+-- INTERFACE
+local interfaceItems = {"Interface Borders", "Basic Interface", "Boton Color", "Boton Text"}
+for i, item in ipairs(interfaceItems) do
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(0.6, 0, 0, 24)
+	lbl.Position = UDim2.new(0.05, 0, 0, (i - 1) * 30 + 10)
+	lbl.Text = item
+	lbl.TextColor3 = Theme.ButtonText
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Font = Enum.Font.SourceSans
+	lbl.TextSize = 15
+	lbl.BackgroundTransparency = 1
+	lbl.Parent = CategoryFrames["Interface"]
+
+	local colorBox = Instance.new("TextButton")
+	colorBox.Size = UDim2.new(0, 22, 0, 22)
+	colorBox.Position = UDim2.new(0.7, 0, 0, (i - 1) * 30 + 10)
+	colorBox.BackgroundColor3 = (i == 1 or i == 4) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)
+	colorBox.Text = ""
+	colorBox.Parent = CategoryFrames["Interface"]
+	Instance.new("UIStroke", colorBox).Color = Theme.Borders
+end
+
+-- KEYBINDS
+local keybindItems = {
+	{"Auto Right", "E"}, {"Auto Left", "R"}, {"Bat TP", "B"},
+	{"Anti Bat Bypass", "V"}, {"Carry Speed", "C"}, {"Lagger Carry", "R"},
+	{"Lagger Speed", "T"}, {"Drop Brainrot", "F"}, {"TP Down", "X"}, {"Reset", "Z"}
+}
+for i, kb in ipairs(keybindItems) do
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(0.6, 0, 0, 22)
+	lbl.Position = UDim2.new(0.05, 0, 0, (i - 1) * 26 + 5)
+	lbl.Text = kb[1]
+	lbl.TextColor3 = Theme.ButtonText
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Font = Enum.Font.SourceSans
+	lbl.TextSize = 14
+	lbl.BackgroundTransparency = 1
+	lbl.Parent = CategoryFrames["Keybinds"]
+
+	local kBox = Instance.new("Frame")
+	kBox.Size = UDim2.new(0, 22, 0, 22)
+	kBox.Position = UDim2.new(0.7, 0, 0, (i - 1) * 26 + 5)
+	kBox.BackgroundColor3 = Theme.ButtonBg
+	kBox.Parent = CategoryFrames["Keybinds"]
+	Instance.new("UIStroke", kBox).Color = Theme.Borders
+
+	local kTxt = Instance.new("TextLabel")
+	kTxt.Size = UDim2.new(1, 0, 1, 0)
+	kTxt.Text = kb[2]
+	kTxt.TextColor3 = Theme.ButtonText
+	kTxt.Font = Enum.Font.SourceSansBold
+	kTxt.BackgroundTransparency = 1
+	kTxt.Parent = kBox
+end
+
+-- ==========================================
+-- PANEL LATERAL DE BOTONES DERECHOS
+-- ==========================================
+local RightPanel = Instance.new("Frame")
+RightPanel.Size = UDim2.new(0, 180, 0, 220)
+RightPanel.Position = UDim2.new(1, -190, 0.5, -110)
+RightPanel.BackgroundTransparency = 1
+RightPanel.Parent = ScreenGui
+
+local layoutPositions = {
+	["Bat TP"] = {0, 0}, ["Auto Left"] = {60, 0}, ["Auto Right"] = {120, 0},
+	["TP Down"] = {60, 50}, ["Carry Speed"] = {120, 50},
+	["Anti Bat Bypass"] = {60, 100}, ["Lagger Carry"] = {120, 100},
+	["Reset"] = {60, 150}, ["Lagger Speed"] = {120, 150}
 }
 
-for _, item in ipairs(quickLayout) do
+for name, pos in pairs(layoutPositions) do
 	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(0, 54, 0, 44)
-	b.Position = UDim2.new(0, item.Pos.X, 0, item.Pos.Y)
-	b.BackgroundColor3 = Theme.InactiveBtn
-	b.TextColor3 = Theme.Text
-	b.Text = item.Name
+	b.Size = UDim2.new(0, 55, 0, 45)
+	b.Position = UDim2.new(0, pos[1], 0, pos[2])
+	b.BackgroundColor3 = Theme.ButtonBg
+	b.TextColor3 = Theme.ButtonText
+	b.Text = name
 	b.TextWrapped = true
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 11
-	b.AutoButtonColor = false
-	b.Parent = RightContainer
+	b.Font = Enum.Font.SourceSansBold
+	b.TextSize = 12
+	b.Parent = RightPanel
 	
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-	local bStroke = Instance.new("UIStroke", b)
-	bStroke.Color = Theme.Accent
-
+	Instance.new("UIStroke", b).Color = Theme.Borders
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+	
 	local active = false
 	b.MouseButton1Click:Connect(function()
 		active = not active
-		TweenService:Create(b, TweenInfo.new(0.15), {
-			BackgroundColor3 = active and Theme.ActiveBtn or Theme.InactiveBtn,
-			TextColor3 = active and Theme.TextDark or Theme.Text
-		}):Play()
-
-		-- Lógica asociada
-		if item.Name == "Carry Speed" then State.CarrySpeedActive = active
-		elseif item.Name == "Lagger Carry" then State.LaggerCarryActive = active
-		elseif item.Name == "Lagger Speed" then State.LaggerSpeedActive = active
-		elseif item.Name == "Bat TP" then State.BatTP = active
-		elseif item.Name == "Anti Bat Bypass" then State.AntiBatBypass = active
-		elseif item.Name == "Auto Right" then State.AutoRight = active
-		elseif item.Name == "Auto Left" then State.AutoLeft = active
-		elseif item.Name == "TP Down" then
+		
+		if name == "TP Down" then
+			-- Activa por 0.5 seg y vuelve automáticamente a negro
+			b.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			b.TextColor3 = Color3.fromRGB(0, 0, 0)
 			local char = LocalPlayer.Character
 			if char and char:FindFirstChild("HumanoidRootPart") then
 				local ray = Ray.new(char.HumanoidRootPart.Position, Vector3.new(0, -500, 0))
 				local _, hit = workspace:FindPartOnRay(ray, char)
 				if hit then char.HumanoidRootPart.CFrame = CFrame.new(hit + Vector3.new(0, 3, 0)) end
 			end
-		elseif item.Name == "Reset" then
-			if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() end
+			task.delay(0.5, function()
+				b.BackgroundColor3 = Theme.ButtonBg
+				b.TextColor3 = Theme.ButtonText
+				active = false
+			end)
+		else
+			if active then
+				b.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+				b.TextColor3 = Color3.fromRGB(0, 0, 0)
+			else
+				b.BackgroundColor3 = Theme.ButtonBg
+				b.TextColor3 = Theme.ButtonText
+			end
+			
+			if name == "Carry Speed" then Settings.CarrySpeedActive = active
+			elseif name == "Lagger Carry" then Settings.LaggerCarryActive = active
+			elseif name == "Lagger Speed" then Settings.LaggerSpeedActive = active
+			elseif name == "Bat TP" then Settings.BatTP = active
+			elseif name == "Anti Bat Bypass" then Settings.AntiBatBypass = active
+			elseif name == "Auto Right" then Settings.AutoRight = active
+			elseif name == "Auto Left" then Settings.AutoLeft = active
+			elseif name == "Reset" then if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() end end
 		end
 	end)
 end
 
--- ====================================================================
--- AUTO STEALER & FPS / PING
--- ====================================================================
-local StealerFrame = Instance.new("Frame")
-StealerFrame.Size = UDim2.new(0, 380, 0, 32)
-StealerFrame.AnchorPoint = Vector2.new(0.5, 1)
-StealerFrame.Position = UDim2.new(0.5, 0, 0.95, 0)
-StealerFrame.BackgroundColor3 = Theme.Background
-StealerFrame.Parent = ScreenGui
+-- ==========================================
+-- AUTO STEALER (ÓVALO COMPLETO Y BARRA INTERNA)
+-- ==========================================
+local OuterOval = Instance.new("Frame")
+OuterOval.Size = UDim2.new(0, 420, 0, 36)
+OuterOval.AnchorPoint = Vector2.new(0.5, 1)
+OuterOval.Position = UDim2.new(0.5, 0, 0.95, 0)
+OuterOval.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+OuterOval.Parent = ScreenGui
 
-Instance.new("UICorner", StealerFrame).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", StealerFrame).Color = Theme.Accent
+Instance.new("UICorner", OuterOval).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", OuterOval).Color = Theme.Borders
 
-local FillBar = Instance.new("Frame")
-FillBar.Size = UDim2.new(0.67, 0, 0.75, 0)
-FillBar.Position = UDim2.new(0, 4, 0.125, 0)
-FillBar.BackgroundColor3 = Theme.Accent
-FillBar.Parent = StealerFrame
-Instance.new("UICorner", FillBar).CornerRadius = UDim.new(1, 0)
+-- Óvalo Interno (Barra)
+local InnerOval = Instance.new("Frame")
+InnerOval.Size = UDim2.new(0, 240, 0, 24)
+InnerOval.Position = UDim2.new(0, 6, 0.5, -12)
+InnerOval.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+InnerOval.ClipsDescendants = true
+InnerOval.Parent = OuterOval
 
-local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(1, 0, 1, 0)
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.Text = "67%   Fps: --  Ping: --"
-StatsLabel.TextColor3 = Theme.Text
-StatsLabel.Font = Enum.Font.GothamBold
-StatsLabel.TextSize = 13
-StatsLabel.Parent = StealerFrame
+Instance.new("UICorner", InnerOval).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", InnerOval).Color = Theme.Borders
 
--- ====================================================================
--- LOOP DE MOTOR Y EVENTOS
--- ====================================================================
-local fpsCount, lastUpdate, currentFPS = 0, os.clock(), 60
+local Fill = Instance.new("Frame")
+Fill.Size = UDim2.new(0, 0, 1, 0)
+Fill.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
+Fill.BorderSizePixel = 0
+Fill.Parent = InnerOval
 
-RunService.RenderStepped:Connect(function()
-	fpsCount = fpsCount + 1
-	if os.clock() - lastUpdate >= 1 then
-		currentFPS = fpsCount
-		fpsCount = 0
-		lastUpdate = os.clock()
-	end
-	
-	local pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-	StatsLabel.Text = "67%   Fps: " .. currentFPS .. "  Ping: " .. pingVal .. "ms"
-	
-	-- Ajuste de Velocidad dinámico
+local PctText = Instance.new("TextLabel")
+PctText.Size = UDim2.new(1, 0, 1, 0)
+PctText.BackgroundTransparency = 1
+PctText.Text = "0%"
+PctText.TextColor3 = Color3.fromRGB(255, 255, 255)
+PctText.Font = Enum.Font.SourceSansBold
+PctText.TextSize = 14
+PctText.Parent = InnerOval
+
+-- Línea vertical divisoria derecha
+local StealerLine = Instance.new("Frame")
+StealerLine.Size = UDim2.new(0, 2, 0, 24)
+StealerLine.Position = UDim2.new(0, 254, 0.5, -12)
+StealerLine.BackgroundColor3 = Theme.Borders
+StealerLine.BorderSizePixel = 0
+StealerLine.Parent = OuterOval
+
+local StatsText = Instance.new("TextLabel")
+StatsText.Size = UDim2.new(0, 150, 1, 0)
+StatsText.Position = UDim2.new(0, 262, 0, 0)
+StatsText.BackgroundTransparency = 1
+StatsText.Text = "Fps: --  Ping: --"
+StatsText.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatsText.Font = Enum.Font.SourceSansBold
+StatsText.TextSize = 14
+StatsText.TextXAlignment = Enum.TextXAlignment.Left
+StatsText.Parent = OuterOval
+
+-- ==========================================
+-- BUCLES DE MOTOR Y FUNCIONALIDADES HABILITADAS
+-- ==========================================
+
+-- Bucle Auto Stealer (Porcentaje que recarga al moverse y reinicia a 0% al estar quieto)
+local idleTime = 0
+local lastPos = Vector3.zero
+
+RunService.Heartbeat:Connect(function(dt)
 	local char = LocalPlayer.Character
-	if char and char:FindFirstChild("Humanoid") then
-		local hum = char.Humanoid
-		if State.LaggerSpeedActive then hum.WalkSpeed = State.LaggerSpeed
-		elseif State.LaggerCarryActive then hum.WalkSpeed = State.LaggerCarry
-		elseif State.CarrySpeedActive then hum.WalkSpeed = State.CarrySpeed
-		else hum.WalkSpeed = State.Speed end
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		local currentPos = char.HumanoidRootPart.Position
+		local moved = (currentPos - lastPos).Magnitude > 0.1 or Settings.AutoRight or Settings.AutoLeft
+		lastPos = currentPos
 		
-		if State.AutoRight then
-			char.HumanoidRootPart.CFrame = CFrame.new(-74.875, char.HumanoidRootPart.Position.Y, -24.304)
-		elseif State.AutoLeft then
-			char.HumanoidRootPart.CFrame = CFrame.new(-74.875, char.HumanoidRootPart.Position.Y, 41.646)
+		if moved then
+			idleTime = 0
+			Settings.StealProgress = math.min(100, Settings.StealProgress + (dt * 20)) -- Carga a 100%
+		else
+			idleTime = idleTime + dt
+			if idleTime >= 3 then
+				Settings.StealProgress = 0 -- Se reinicia al 0% tras 3s quieto
+			end
+		end
+		
+		Fill.Size = UDim2.new(Settings.StealProgress / 100, 0, 1, 0)
+		PctText.Text = math.floor(Settings.StealProgress) .. "%"
+	end
+end)
+
+-- Bucle BAT TP y Auto Bat Bypass (Ataque y Teletransporte)
+task.spawn(function()
+	local angle = 0
+	while true do
+		task.wait(0.05)
+		local char = LocalPlayer.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			-- BAT TP: Teletransporta al jugador más cercano arriba de su cabeza y gira
+			if Settings.BatTP then
+				local target = nil
+				local minDist = math.huge
+				for _, p in ipairs(Players:GetPlayers()) do
+					if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+						local d = (p.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+						if d < minDist then minDist = d; target = p.Character.HumanoidRootPart end
+					end
+				end
+				if target then
+					angle = angle + math.rad(Settings.AimbotSpeed)
+					local offset = Vector3.new(math.cos(angle) * 3, 4, math.sin(angle) * 3)
+					target.CFrame = CFrame.new(char.HumanoidRootPart.Position + offset, char.HumanoidRootPart.Position)
+				end
+			end
+			
+			-- Auto Bat Bypass: Vuela hacia el objetivo y hace clic con slot 1 cada 0.5s
+			if Settings.AntiBatBypass then
+				local target = nil
+				local minDist = math.huge
+				for _, p in ipairs(Players:GetPlayers()) do
+					if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+						local d = (p.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+						if d < minDist then minDist = d; target = p.Character.HumanoidRootPart end
+					end
+				end
+				if target then
+					char.HumanoidRootPart.CFrame = CFrame.new(target.Position + Vector3.new(0, 0, 2))
+				end
+			end
 		end
 	end
 end)
 
+-- Auto Clics para Bat TP / Anti Bat Bypass cada 0.5s
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if Settings.BatTP or Settings.AntiBatBypass then
+			local bp = LocalPlayer:FindFirstChild("Backpack")
+			if bp and #bp:GetChildren() > 0 then
+				local item = bp:GetChildren()[1]
+				if item and item:IsA("Tool") then
+					item.Parent = LocalPlayer.Character
+				end
+			end
+			VirtualUser:Button1Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+			VirtualUser:Button1Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+		end
+	end
+end)
+
+-- RenderStepped principal (FPS, Ping y Velocidades)
+local frameCount, lastCalc, currentFPS = 0, os.clock(), 60
+
+RunService.RenderStepped:Connect(function()
+	frameCount = frameCount + 1
+	if os.clock() - lastCalc >= 1 then
+		currentFPS = frameCount
+		frameCount = 0
+		lastCalc = os.clock()
+	end
+	
+	local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+	StatsText.Text = "Fps: " .. currentFPS .. "  Ping: " .. ping .. "ms"
+	
+	local char = LocalPlayer.Character
+	if char and char:FindFirstChild("Humanoid") then
+		local hum = char.Humanoid
+		
+		-- Velocidades intercaladas
+		if Settings.LaggerSpeedActive then hum.WalkSpeed = Settings.LaggerSpeed
+		elseif Settings.LaggerCarryActive then hum.WalkSpeed = Settings.LaggerCarry
+		elseif Settings.CarrySpeedActive then hum.WalkSpeed = Settings.CarrySpeed
+		else hum.WalkSpeed = Settings.Speed end
+		
+		-- Hold Jump
+		if Settings.JumpMode == "Hold" and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+			hum:ChangeState(Enum.HumanoidStateType.Jumping)
+		end
+	end
+end)
+
+-- Salto Infinito
 UserInputService.JumpRequest:Connect(function()
-	if State.InfinityJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+	if Settings.InfinityJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
 		LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 	end
 end)
