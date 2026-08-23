@@ -1,1188 +1,1758 @@
--- Roblox Studio Script: ZaryonHub UI y Funciones
--- Ubicación: StarterPlayer -> StarterPlayerScripts (LocalScript)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
-local Players = Game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local UserInputService = Game:GetService("UserInputService")
-local ReplicatedStorage = Game:GetService("ReplicatedStorage")
-local TextService = Game:GetService("TextService")
-local TweenService = Game:GetService("TweenService")
-local RunService = Game:GetService("RunService")
-local Stats = Game:GetService("Stats")
 
--- Constantes y Configuración de Colores
-local COL_BLACK = Color3.fromRGB(0, 0, 0)
-local COL_WHITE_GREY = Color3.fromRGB(220, 220, 220)
-local COL_WHITE = Color3.fromRGB(255, 255, 255)
-local COL_GREY_BORDER = Color3.fromRGB(150, 150, 150)
-local COL_BG = COL_BLACK
-local COL_TXT = COL_WHITE_GREY
-local COL_BORDER = COL_GREY_BORDER
-local FONT_MAIN = Enum.Font.SourceSansBold
+local Settings = {
+    Speed = 59,
+    CarrySpeed = 29,
+    LaggerCarry = 24.5,
+    LaggerSpeed = 15,
+    StealSpeed = 45,
+    AimbotSpeed = 45,
+    FOV = 90,
 
--- Variables de Estado Global
-local MenuOpen = false
-local CurrentCategory = "Speed"
-local Variables = {
-	Speed = 59,
-	CarrySpeed = 29,
-	LaggerCarry = 24.5,
-	LaggerSpeed = 15,
-	AimbotSpeed = 45,
-	StealSpeed = 45,
-	AutoRight = false,
-	AutoLeft = false,
-	BatTP = false,
-	AntiBatBypass = false,
-	DropBrainrot = false,
-	TPDown = false,
-	AutoSteal = false,
-	InfinityJump = false,
-	AntiRadgoll = false,
-	AntiLag = false,
-	POV = 90,
-	UnWalk = false,
-	JumpMode = "Manual", -- Manual, Hold
-	HoldJumpActive = false,
+    AutoRight = false,
+    AutoLeft = false,
+    BatTP = false,
+    AntiBatBypass = false,
+    DropBrainrot = false,
+    CarrySpeedEnabled = false,
+    LaggerCarryEnabled = false,
+    LaggerSpeedEnabled = false,
+    TPDown = false,
+
+    UnWalk = false,
+    InfinityJump = false,
+    AntiRagdoll = false,
+    AntiLag = false,
+
+    JumpMode = "Manual",
+
+    InterfaceBorderColor = Color3.fromRGB(210, 210, 210),
+    InterfaceBackgroundColor = Color3.fromRGB(12, 12, 12),
+    ButtonColor = Color3.fromRGB(0, 0, 0),
+    ButtonTextColor = Color3.fromRGB(210, 210, 210),
 }
+
+local COLORS = {
+    Black = Color3.fromRGB(0, 0, 0),
+    Panel = Color3.fromRGB(12, 12, 12),
+    White = Color3.fromRGB(245, 245, 245),
+    Gray = Color3.fromRGB(185, 185, 185),
+    DarkGray = Color3.fromRGB(70, 70, 70),
+    MidGray = Color3.fromRGB(120, 120, 120),
+}
+
+local function getCharacter()
+    return LocalPlayer.Character
+end
+
+local function getHumanoid()
+    local character = getCharacter()
+    return character and character:FindFirstChildOfClass("Humanoid")
+end
+
+local function getRoot()
+    local character = getCharacter()
+    return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function notify(text)
+    local old = PlayerGui:FindFirstChild("ZaryonNotification")
+
+    if old then
+        old:Destroy()
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ZaryonNotification"
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 10000
+    gui.Parent = PlayerGui
+
+    local label = Instance.new("TextLabel")
+    label.AnchorPoint = Vector2.new(0.5, 0)
+    label.Position = UDim2.fromScale(0.5, 0.05)
+    label.Size = UDim2.new(0, 330, 0, 42)
+    label.BackgroundColor3 = COLORS.Black
+    label.BackgroundTransparency = 0.05
+    label.BorderColor3 = COLORS.Gray
+    label.TextColor3 = COLORS.White
+    label.Text = text
+    label.TextSize = 14
+    label.Font = Enum.Font.Gotham
+    label.Parent = gui
+
+    Instance.new("UICorner", label).CornerRadius = UDim.new(0, 7)
+
+    task.delay(2.2, function()
+        if gui.Parent then
+            gui:Destroy()
+        end
+    end)
+end
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "ZaryonHub"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.DisplayOrder = 999
+Gui.Parent = PlayerGui
+
+local function corner(parent, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 6)
+    c.Parent = parent
+    return c
+end
+
+local function stroke(parent, color, thickness)
+    local s = Instance.new("UIStroke")
+    s.Color = color or COLORS.Gray
+    s.Thickness = thickness or 1
+    s.Parent = parent
+    return s
+end
+
+local function label(parent, text, size, position, dimensions)
+    local l = Instance.new("TextLabel")
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = Settings.ButtonTextColor
+    l.Font = Enum.Font.Gotham
+    l.TextSize = size or 14
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextYAlignment = Enum.TextYAlignment.Center
+    l.Position = position or UDim2.new()
+    l.Size = dimensions or UDim2.new(1, 0, 0, 30)
+    l.Parent = parent
+    return l
+end
+
+local function button(parent, text, position, size)
+    local b = Instance.new("TextButton")
+
+    b.AutoButtonColor = false
+    b.Text = text
+    b.TextColor3 = Settings.ButtonTextColor
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 13
+    b.BackgroundColor3 = Settings.ButtonColor
+    b.BorderSizePixel = 0
+    b.Position = position
+    b.Size = size
+    b.Parent = parent
+
+    corner(b, 6)
+    stroke(b, Settings.InterfaceBorderColor, 1)
+
+    return b
+end
+
+local function setButtonState(b, active)
+    if active then
+        b.BackgroundColor3 = COLORS.White
+        b.TextColor3 = COLORS.Black
+    else
+        b.BackgroundColor3 = Settings.ButtonColor
+        b.TextColor3 = Settings.ButtonTextColor
+    end
+end
+
+local function addPressEffect(b)
+    b.Activated:Connect(function()
+        local original = b.Size
+
+        local smaller = UDim2.new(
+            original.X.Scale,
+            original.X.Offset - 4,
+            original.Y.Scale,
+            original.Y.Offset - 4
+        )
+
+        TweenService:Create(
+            b,
+            TweenInfo.new(
+                0.06,
+                Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out
+            ),
+            {Size = smaller}
+        ):Play()
+
+        task.delay(0.06, function()
+            if b.Parent then
+                TweenService:Create(
+                    b,
+                    TweenInfo.new(
+                        0.06,
+                        Enum.EasingStyle.Quad,
+                        Enum.EasingDirection.Out
+                    ),
+                    {Size = original}
+                ):Play()
+            end
+        end)
+    end)
+end
+
+local MenuButton = button(
+    Gui,
+    "Menu",
+    UDim2.new(0, 22, 0.5, -28),
+    UDim2.new(0, 86, 0, 56)
+)
+
+MenuButton.AnchorPoint = Vector2.new(0, 0.5)
+MenuButton.TextSize = 15
+
+addPressEffect(MenuButton)
+
+local Window = Instance.new("Frame")
+
+Window.Name = "Window"
+Window.AnchorPoint = Vector2.new(0.5, 0.5)
+Window.Position = UDim2.fromScale(0.5, 0.5)
+Window.Size = UDim2.new(0.86, 0, 0.78, 0)
+Window.BackgroundColor3 = Settings.InterfaceBackgroundColor
+Window.BorderSizePixel = 0
+Window.Visible = false
+Window.Parent = Gui
+
+corner(Window, 9)
+
+local WindowStroke = stroke(
+    Window,
+    Settings.InterfaceBorderColor,
+    1.5
+)
+
+local WindowConstraint = Instance.new("UISizeConstraint")
+
+WindowConstraint.MinSize = Vector2.new(330, 330)
+WindowConstraint.MaxSize = Vector2.new(850, 620)
+WindowConstraint.Parent = Window
+
+local Header = label(
+    Window,
+    "ZaryonHub",
+    21,
+    UDim2.new(0, 16, 0, 5),
+    UDim2.new(1, -32, 0, 38)
+)
+
+Header.Font = Enum.Font.GothamSemibold
+
+local HeaderLine = Instance.new("Frame")
+
+HeaderLine.BackgroundColor3 = Settings.InterfaceBorderColor
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Position = UDim2.new(0, 10, 0, 47)
+HeaderLine.Size = UDim2.new(1, -20, 0, 1)
+HeaderLine.Parent = Window
+
+local Close = button(
+    Window,
+    "×",
+    UDim2.new(1, -42, 0, 8),
+    UDim2.new(0, 30, 0, 30)
+)
+
+Close.TextSize = 20
+
+local Nav = Instance.new("ScrollingFrame")
+
+Nav.Name = "Navigation"
+Nav.BackgroundTransparency = 1
+Nav.BorderSizePixel = 0
+Nav.ScrollBarThickness = 2
+Nav.Position = UDim2.new(0, 8, 0, 58)
+Nav.Size = UDim2.new(0, 118, 1, -68)
+Nav.CanvasSize = UDim2.new()
+Nav.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Nav.Parent = Window
+
+local NavLayout = Instance.new("UIListLayout")
+
+NavLayout.Padding = UDim.new(0, 5)
+NavLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NavLayout.Parent = Nav
+
+local NavPadding = Instance.new("UIPadding")
+
+NavPadding.PaddingTop = UDim.new(0, 3)
+NavPadding.PaddingBottom = UDim.new(0, 5)
+NavPadding.Parent = Nav
+
+local Content = Instance.new("Frame")
+
+Content.Name = "Content"
+Content.BackgroundTransparency = 1
+Content.Position = UDim2.new(0, 134, 0, 58)
+Content.Size = UDim2.new(1, -144, 1, -68)
+Content.Parent = Window
+
+local ContentLine = Instance.new("Frame")
+
+ContentLine.BackgroundColor3 = Settings.InterfaceBorderColor
+ContentLine.BorderSizePixel = 0
+ContentLine.Position = UDim2.new(0, -8, 0, 0)
+ContentLine.Size = UDim2.new(0, 1, 1, 0)
+ContentLine.Parent = Content
+
+local Pages = {}
+local NavButtons = {}
+
+local categories = {
+    "Speed",
+    "Combat",
+    "Steal",
+    "Movement",
+    "Misc",
+    "Visual",
+    "Interface",
+    "Keybinds",
+}
+
+local function createPage(name)
+    local page = Instance.new("ScrollingFrame")
+
+    page.Name = name
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 2
+    page.Size = UDim2.fromScale(1, 1)
+    page.CanvasSize = UDim2.new()
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.Visible = false
+    page.Parent = Content
+
+    local layout = Instance.new("UIListLayout")
+
+    layout.Padding = UDim.new(0, 7)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = page
+
+    local pad = Instance.new("UIPadding")
+
+    pad.PaddingLeft = UDim.new(0, 5)
+    pad.PaddingRight = UDim.new(0, 7)
+    pad.PaddingBottom = UDim.new(0, 10)
+    pad.Parent = page
+
+    Pages[name] = page
+
+    return page
+end
+
+for i, category in ipairs(categories) do
+    local navButton = button(
+        Nav,
+        category,
+        UDim2.new(),
+        UDim2.new(1, -7, 0, 38)
+    )
+
+    navButton.LayoutOrder = i
+    navButton.TextXAlignment = Enum.TextXAlignment.Left
+
+    local navPadding = Instance.new("UIPadding")
+
+    navPadding.PaddingLeft = UDim.new(0, 10)
+    navPadding.Parent = navButton
+
+    NavButtons[category] = navButton
+
+    createPage(category)
+end
+
+local function showPage(name)
+    for pageName, page in pairs(Pages) do
+        page.Visible = pageName == name
+    end
+
+    for navName, navButton in pairs(NavButtons) do
+        setButtonState(navButton, navName == name)
+    end
+end
+
+for category, navButton in pairs(NavButtons) do
+    navButton.Activated:Connect(function()
+        showPage(category)
+    end)
+end
+
+local function addTitle(page, text)
+    local t = label(
+        page,
+        text,
+        18,
+        UDim2.new(),
+        UDim2.new(1, 0, 0, 35)
+    )
+
+    t.Font = Enum.Font.GothamSemibold
+
+    local line = Instance.new("Frame")
+
+    line.BackgroundColor3 = Settings.InterfaceBorderColor
+    line.BorderSizePixel = 0
+    line.Size = UDim2.new(1, 0, 0, 1)
+    line.Parent = page
+end
+
+local function addValueRow(
+    page,
+    name,
+    initial,
+    minValue,
+    maxValue,
+    step,
+    onChanged
+)
+    local row = Instance.new("Frame")
+
+    row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1, 0, 0, 43)
+    row.Parent = page
+
+    local text = label(
+        row,
+        name,
+        14,
+        UDim2.new(0, 3, 0, 0),
+        UDim2.new(0.48, -3, 1, 0)
+    )
+
+    local minus = button(
+        row,
+        "-",
+        UDim2.new(0.55, 0, 0, 4),
+        UDim2.new(0, 38, 0, 35)
+    )
+
+    local box = Instance.new("TextBox")
+
+    box.BackgroundColor3 = COLORS.Black
+    box.BorderSizePixel = 0
+    box.TextColor3 = Settings.ButtonTextColor
+    box.Font = Enum.Font.Gotham
+    box.TextSize = 13
+    box.Text = tostring(initial)
+    box.ClearTextOnFocus = false
+    box.Position = UDim2.new(0.55, 43, 0, 4)
+    box.Size = UDim2.new(0, 60, 0, 35)
+    box.Parent = row
+
+    corner(box, 6)
+    stroke(box, Settings.InterfaceBorderColor, 1)
+
+    local plus = button(
+        row,
+        "+",
+        UDim2.new(0.55, 108, 0, 4),
+        UDim2.new(0, 38, 0, 35)
+    )
+
+    local current = initial
+
+    local function apply(value)
+        value = math.clamp(
+            value,
+            minValue,
+            maxValue
+        )
+
+        current = value
+        box.Text = tostring(value)
+
+        if onChanged then
+            onChanged(value)
+        end
+    end
+
+    minus.Activated:Connect(function()
+        apply(current - step)
+    end)
+
+    plus.Activated:Connect(function()
+        apply(current + step)
+    end)
+
+    box.FocusLost:Connect(function()
+        local number = tonumber(box.Text)
+
+        if number then
+            apply(number)
+        else
+            box.Text = tostring(current)
+        end
+    end)
+
+    return {
+        Row = row,
+        Set = apply,
+        Get = function()
+            return current
+        end,
+        TextBox = box,
+    }
+end
+
+local function addToggle(page, name, initial, callback)
+    local row = Instance.new("Frame")
+
+    row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1, 0, 0, 42)
+    row.Parent = page
+
+    local text = label(
+        row,
+        name,
+        14,
+        UDim2.new(0, 3, 0, 0),
+        UDim2.new(1, -75, 1, 0)
+    )
+
+    local toggle = button(
+        row,
+        "",
+        UDim2.new(1, -62, 0.5, -12),
+        UDim2.new(0, 55, 0, 24)
+    )
+
+    toggle.BackgroundColor3 = COLORS.Black
+    toggle.ClipsDescendants = true
+
+    local toggleStroke =
+        toggle:FindFirstChildOfClass("UIStroke")
+
+    if toggleStroke then
+        toggleStroke.Color =
+            Settings.InterfaceBorderColor
+    end
+
+    local knob = Instance.new("Frame")
+
+    knob.Size = UDim2.new(0, 18, 0, 18)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.new(1, -12, 0.5, 0)
+    knob.BackgroundColor3 = COLORS.White
+    knob.BorderSizePixel = 0
+    knob.Parent = toggle
+
+    corner(knob, 20)
+
+    local active = initial == true
+
+    local function render()
+        if active then
+            toggle.BackgroundColor3 = COLORS.White
+            knob.BackgroundColor3 = COLORS.Black
+
+            TweenService:Create(
+                knob,
+                TweenInfo.new(
+                    0.12,
+                    Enum.EasingStyle.Quad
+                ),
+                {
+                    Position =
+                        UDim2.new(0, 12, 0.5, 0)
+                }
+            ):Play()
+        else
+            toggle.BackgroundColor3 = COLORS.Black
+            knob.BackgroundColor3 = COLORS.White
+
+            TweenService:Create(
+                knob,
+                TweenInfo.new(
+                    0.12,
+                    Enum.EasingStyle.Quad
+                ),
+                {
+                    Position =
+                        UDim2.new(1, -12, 0.5, 0)
+                }
+            ):Play()
+        end
+    end
+
+    local function set(value)
+        active = value
+        render()
+
+        if callback then
+            callback(active)
+        end
+    end
+
+    toggle.Activated:Connect(function()
+        set(not active)
+    end)
+
+    render()
+
+    return {
+        Row = row,
+        Button = toggle,
+        Set = set,
+        Get = function()
+            return active
+        end,
+    }
+end
+
+local function addChoice(
+    page,
+    name,
+    choices,
+    selected,
+    callback
+)
+    local row = Instance.new("Frame")
+
+    row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1, 0, 0, 42)
+    row.Parent = page
+
+    label(
+        row,
+        name,
+        14,
+        UDim2.new(0, 3, 0, 0),
+        UDim2.new(0.45, -3, 1, 0)
+    )
+
+    local holder = Instance.new("Frame")
+
+    holder.BackgroundColor3 = COLORS.Black
+    holder.Position = UDim2.new(0.45, 0, 0, 4)
+    holder.Size = UDim2.new(0.55, -3, 0, 35)
+    holder.Parent = row
+
+    corner(holder, 6)
+    stroke(
+        holder,
+        Settings.InterfaceBorderColor,
+        1
+    )
+
+    local layout = Instance.new("UIListLayout")
+
+    layout.FillDirection =
+        Enum.FillDirection.Horizontal
+    layout.HorizontalAlignment =
+        Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment =
+        Enum.VerticalAlignment.Center
+    layout.Parent = holder
+
+    for _, choice in ipairs(choices) do
+        local b = Instance.new("TextButton")
+
+        b.AutoButtonColor = false
+        b.Text = choice
+        b.Font = Enum.Font.Gotham
+        b.TextSize = 12
+        b.Size = UDim2.new(0.5, 0, 1, 0)
+        b.BorderSizePixel = 0
+        b.Parent = holder
+
+        local function render()
+            if choice == selected then
+                b.BackgroundColor3 = COLORS.White
+                b.TextColor3 = COLORS.Black
+            else
+                b.BackgroundColor3 = COLORS.Black
+                b.TextColor3 = Settings.ButtonTextColor
+            end
+        end
+
+        b.Activated:Connect(function()
+            selected = choice
+
+            for _, child in ipairs(
+                holder:GetChildren()
+            ) do
+                if child:IsA("TextButton") then
+                    if child.Text == selected then
+                        child.BackgroundColor3 =
+                            COLORS.White
+                        child.TextColor3 =
+                            COLORS.Black
+                    else
+                        child.BackgroundColor3 =
+                            COLORS.Black
+                        child.TextColor3 =
+                            Settings.ButtonTextColor
+                    end
+                end
+            end
+
+            if callback then
+                callback(selected)
+            end
+        end)
+
+        render()
+    end
+
+    return row
+end
+
+do
+    local page = Pages.Speed
+
+    addTitle(page, "Speed")
+
+    addValueRow(
+        page,
+        "Speed",
+        Settings.Speed,
+        1,
+        200,
+        1,
+        function(v)
+            Settings.Speed = v
+        end
+    )
+
+    addValueRow(
+        page,
+        "Carry Speed",
+        Settings.CarrySpeed,
+        1,
+        200,
+        1,
+        function(v)
+            Settings.CarrySpeed = v
+        end
+    )
+
+    addValueRow(
+        page,
+        "Lagger Carry",
+        Settings.LaggerCarry,
+        1,
+        200,
+        0.5,
+        function(v)
+            Settings.LaggerCarry = v
+        end
+    )
+
+    addValueRow(
+        page,
+        "Lagger Speed",
+        Settings.LaggerSpeed,
+        1,
+        200,
+        1,
+        function(v)
+            Settings.LaggerSpeed = v
+        end
+    )
+
+    addValueRow(
+        page,
+        "Aimbot Speed",
+        Settings.AimbotSpeed,
+        1,
+        200,
+        1,
+        function(v)
+            Settings.AimbotSpeed = v
+        end
+    )
+end
+
+do
+    local page = Pages.Combat
+
+    addTitle(page, "Combat")
+
+    addToggle(
+        page,
+        "Auto Right",
+        false,
+        function(v)
+            Settings.AutoRight = v
+
+            if v then
+                moveToCoordinate(
+                    -74.875,
+                    -24.304
+                )
+            end
+        end
+    )
+
+    addToggle(
+        page,
+        "Auto Left",
+        false,
+        function(v)
+            Settings.AutoLeft = v
+
+            if v then
+                moveToCoordinate(
+                    -74.875,
+                    41.646
+                )
+            end
+        end
+    )
+
+    addToggle(
+        page,
+        "Bat TP",
+        false,
+        function(v)
+            Settings.BatTP = v
+
+            if v then
+                notify(
+                    "Bat TP: disabled in safe Studio template"
+                )
+            end
+        end
+    )
+
+    addToggle(
+        page,
+        "Anti Bat Bypass",
+        false,
+        function(v)
+            Settings.AntiBatBypass = v
+
+            if v then
+                notify(
+                    "Anti Bat Bypass: disabled in safe Studio template"
+                )
+            end
+        end
+    )
+
+    addToggle(
+        page,
+        "Drop Brainrot",
+        false,
+        function(v)
+            Settings.DropBrainrot = v
+
+            if v then
+                notify(
+                    "Drop Brainrot: disabled in safe Studio template"
+                )
+            end
+        end
+    )
+end
+
+do
+    local page = Pages.Steal
+
+    addTitle(page, "Steal")
+
+    addValueRow(
+        page,
+        "Steal Speed",
+        Settings.StealSpeed,
+        1,
+        200,
+        1,
+        function(v)
+            Settings.StealSpeed = v
+        end
+    )
+
+    addToggle(
+        page,
+        "Auto Steal",
+        false,
+        function(v)
+            if v then
+                notify(
+                    "Auto Steal requires server-side logic in your own experience"
+                )
+            end
+        end
+    )
+end
+
+do
+    local page = Pages.Movement
+
+    addTitle(page, "Movement")
+
+    addToggle(
+        page,
+        "UnWalk",
+        Settings.UnWalk,
+        function(v)
+            Settings.UnWalk = v
+
+            local humanoid = getHumanoid()
+
+            if humanoid then
+                humanoid.AutoRotate = not v
+            end
+        end
+    )
+
+    addChoice(
+        page,
+        "Jump",
+        {"Manual", "Hold"},
+        "Manual",
+        function(choice)
+            Settings.JumpMode = choice
+        end
+    )
+end
+
+do
+    local page = Pages.Misc
+
+    addTitle(page, "Misc")
+
+    addToggle(
+        page,
+        "Infinity Jump",
+        Settings.InfinityJump,
+        function(v)
+            Settings.InfinityJump = v
+        end
+    )
+
+    addToggle(
+        page,
+        "Anti Ragdoll",
+        Settings.AntiRagdoll,
+        function(v)
+            Settings.AntiRagdoll = v
+        end
+    )
+end
+
+do
+    local page = Pages.Visual
+
+    addTitle(page, "Visual")
+
+    addToggle(
+        page,
+        "Anti Lag",
+        Settings.AntiLag,
+        function(v)
+            Settings.AntiLag = v
+
+            if v then
+                for _, obj in ipairs(
+                    workspace:GetDescendants()
+                ) do
+                    if obj:IsA("BasePart") then
+                        obj.Material =
+                            Enum.Material.Plastic
+                    end
+                end
+            end
+        end
+    )
+
+    addValueRow(
+        page,
+        "Pov",
+        Settings.FOV,
+        30,
+        120,
+        1,
+        function(v)
+            Settings.FOV = v
+
+            local camera =
+                workspace.CurrentCamera
+
+            if camera then
+                camera.FieldOfView = v
+            end
+        end
+    )
+end
+
+local function colorButton(
+    parent,
+    title,
+    current,
+    callback
+)
+    local b = button(
+        parent,
+        "",
+        UDim2.new(0.7, 0, 0, 4),
+        UDim2.new(0, 44, 0, 35)
+    )
+
+    b.BackgroundColor3 = current
+    b.Text = ""
+
+    b.Activated:Connect(function()
+        local colors = {
+            {
+                "White",
+                Color3.fromRGB(
+                    220,
+                    220,
+                    220
+                )
+            },
+
+            {
+                "Red",
+                Color3.fromRGB(
+                    220,
+                    60,
+                    60
+                )
+            },
+
+            {
+                "Orange",
+                Color3.fromRGB(
+                    240,
+                    130,
+                    40
+                )
+            },
+
+            {
+                "Yellow",
+                Color3.fromRGB(
+                    235,
+                    210,
+                    50
+                )
+            },
+
+            {
+                "Pink",
+                Color3.fromRGB(
+                    235,
+                    80,
+                    160
+                )
+            },
+
+            {
+                "Purple",
+                Color3.fromRGB(
+                    150,
+                    70,
+                    220
+                )
+            },
+
+            {
+                "Blue",
+                Color3.fromRGB(
+                    60,
+                    130,
+                    235
+                )
+            },
+
+            {
+                "Green",
+                Color3.fromRGB(
+                    70,
+                    190,
+                    100
+                )
+            },
+        }
+
+        local chooser = Instance.new("Frame")
+
+        chooser.BackgroundColor3 =
+            COLORS.Black
+
+        chooser.BorderSizePixel = 0
+
+        chooser.Position =
+            UDim2.new(1, 5, 0, 0)
+
+        chooser.Size =
+            UDim2.new(0, 170, 0, 120)
+
+        chooser.ZIndex = 50
+        chooser.Parent = b
+
+        corner(chooser, 6)
+
+        stroke(
+            chooser,
+            Settings.InterfaceBorderColor,
+            1
+        )
+
+        local grid =
+            Instance.new("UIGridLayout")
+
+        grid.CellSize =
+            UDim2.new(0, 78, 0, 27)
+
+        grid.CellPadding =
+            UDim2.new(0, 4, 0, 4)
+
+        grid.Parent = chooser
+
+        for _, data in ipairs(colors) do
+            local c =
+                Instance.new("TextButton")
+
+            c.AutoButtonColor = false
+            c.Text = data[1]
+            c.Font = Enum.Font.Gotham
+            c.TextSize = 11
+            c.TextColor3 = COLORS.White
+            c.BackgroundColor3 = data[2]
+            c.BorderSizePixel = 0
+            c.ZIndex = 51
+            c.Parent = chooser
+
+            corner(c, 4)
+
+            c.Activated:Connect(function()
+                b.BackgroundColor3 =
+                    data[2]
+
+                callback(data[2])
+
+                chooser:Destroy()
+            end)
+        end
+    end)
+
+    return b
+end
+
+do
+    local page = Pages.Interface
+
+    addTitle(page, "Interface")
+
+    local function colorRow(
+        name,
+        current,
+        callback
+    )
+        local row =
+            Instance.new("Frame")
+
+        row.BackgroundTransparency = 1
+        row.Size =
+            UDim2.new(1, 0, 0, 43)
+
+        row.Parent = page
+
+        label(
+            row,
+            name,
+            13,
+            UDim2.new(0, 3, 0, 0),
+            UDim2.new(0.68, 0, 1, 0)
+        )
+
+        colorButton(
+            row,
+            name,
+            current,
+            callback
+        )
+    end
+
+    colorRow(
+        "Interface Borders",
+        Settings.InterfaceBorderColor,
+        function(c)
+            Settings.InterfaceBorderColor = c
+
+            WindowStroke.Color = c
+            HeaderLine.BackgroundColor3 = c
+            ContentLine.BackgroundColor3 = c
+        end
+    )
+
+    colorRow(
+        "Basic Interface",
+        Settings.InterfaceBackgroundColor,
+        function(c)
+            Settings.InterfaceBackgroundColor = c
+            Window.BackgroundColor3 = c
+        end
+    )
+
+    colorRow(
+        "Button Color",
+        Settings.ButtonColor,
+        function(c)
+            Settings.ButtonColor = c
+        end
+    )
+
+    colorRow(
+        "Button Text",
+        Settings.ButtonTextColor,
+        function(c)
+            Settings.ButtonTextColor = c
+        end
+    )
+end
+
 local Keybinds = {
-	AutoRight = Enum.KeyCode.E,
-	AutoLeft = Enum.KeyCode.R,
-	BatTP = Enum.KeyCode.B,
-	AntiBatBypass = Enum.KeyCode.V,
-	CarrySpeed = Enum.KeyCode.C,
-	LaggerCarry = Enum.KeyCode.R, -- Conflicto con AutoLeft, pero sigo instrucciones
-	LaggerSpeed = Enum.KeyCode.T,
-	DropBrainrot = Enum.KeyCode.F,
-	TPDown = Enum.KeyCode.X,
-	Reset = Enum.KeyCode.Z
+    ["Auto Right"] = Enum.KeyCode.E,
+    ["Auto Left"] = Enum.KeyCode.Q,
+    ["Bat TP"] = Enum.KeyCode.B,
+    ["Anti Bat Bypass"] = Enum.KeyCode.V,
+    ["Carry Speed"] = Enum.KeyCode.C,
+    ["Lagger Carry"] = Enum.KeyCode.R,
+    ["Lagger Speed"] = Enum.KeyCode.T,
+    ["Drop Brainrot"] = Enum.KeyCode.F,
+    ["TP Down"] = Enum.KeyCode.X,
+    ["Reset"] = Enum.KeyCode.Z,
 }
 
--- Referencias de UI (creadas más abajo)
-local ScreenGui, MenuButton, MenuFrame, CategoryList, ContentFrame
-local FastButtonsFrame, AutoStealerFrame
-local CategoryButtons = {}
-local FeatureElements = {}
+do
+    local page = Pages.Keybinds
 
--- --- FUNCIONES DE UTILIDAD ---
+    addTitle(page, "Keybinds")
 
-local function Create(className, properties)
-	local instance = Instance.new(className)
-	for key, value in pairs(properties) do
-		instance[key] = value
-	end
-	return instance
+    for action, key in pairs(Keybinds) do
+        local row =
+            Instance.new("Frame")
+
+        row.BackgroundTransparency = 1
+        row.Size =
+            UDim2.new(1, 0, 0, 42)
+
+        row.Parent = page
+
+        label(
+            row,
+            action,
+            13,
+            UDim2.new(0, 3, 0, 0),
+            UDim2.new(1, -70, 1, 0)
+        )
+
+        local keyBox = button(
+            row,
+            key.Name,
+            UDim2.new(1, -57, 0, 4),
+            UDim2.new(0, 52, 0, 34)
+        )
+
+        keyBox.TextSize = 12
+    end
 end
 
-local function AnimateColor(object, property, endColor, duration)
-	local tweenInfo = TweenInfo.new(duration or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(object, tweenInfo, {[property] = endColor}):Play()
+local RightButtons =
+    Instance.new("Frame")
+
+RightButtons.BackgroundTransparency = 1
+RightButtons.AnchorPoint =
+    Vector2.new(1, 0.5)
+
+RightButtons.Position =
+    UDim2.new(1, -18, 0.5, 0)
+
+RightButtons.Size =
+    UDim2.new(0, 90, 0, 210)
+
+RightButtons.Parent = Gui
+
+local RightLayout =
+    Instance.new("UIListLayout")
+
+RightLayout.HorizontalAlignment =
+    Enum.HorizontalAlignment.Center
+
+RightLayout.VerticalAlignment =
+    Enum.VerticalAlignment.Center
+
+RightLayout.Padding =
+    UDim.new(0, 7)
+
+RightLayout.Parent =
+    RightButtons
+
+local function outsideButton(
+    text,
+    callback
+)
+    local b = button(
+        RightButtons,
+        text,
+        UDim2.new(),
+        UDim2.new(0, 82, 0, 58)
+    )
+
+    b.TextSize = 12
+
+    addPressEffect(b)
+
+    b.Activated:Connect(function()
+        callback(b)
+    end)
+
+    return b
 end
 
-local function MakeDraggable(frame)
-	local dragging, dragInput, dragStart, startPos
-	local function update(input)
-		local delta = input.Position - dragStart
-		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
-	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = frame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then dragging = false end
-			end)
-		end
-	end)
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dragInput = input
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then update(input) end
-	end)
+local CarryButton =
+    outsideButton(
+        "Carry\nSpeed",
+        function(b)
+            Settings.CarrySpeedEnabled =
+                not Settings.CarrySpeedEnabled
+
+            setButtonState(
+                b,
+                Settings.CarrySpeedEnabled
+            )
+
+            local humanoid =
+                getHumanoid()
+
+            if humanoid then
+                humanoid.WalkSpeed =
+                    Settings.CarrySpeedEnabled
+                    and Settings.CarrySpeed
+                    or Settings.Speed
+            end
+        end
+    )
+
+local BatButton =
+    outsideButton(
+        "Bat TP",
+        function(b)
+            Settings.BatTP =
+                not Settings.BatTP
+
+            setButtonState(
+                b,
+                Settings.BatTP
+            )
+
+            if Settings.BatTP then
+                notify(
+                    "Bat TP is intentionally unavailable in this Studio-safe build."
+                )
+            end
+        end
+    )
+
+local LaggerCarryButton =
+    outsideButton(
+        "Lagger\nCarry",
+        function(b)
+            Settings.LaggerCarryEnabled =
+                not Settings.LaggerCarryEnabled
+
+            setButtonState(
+                b,
+                Settings.LaggerCarryEnabled
+            )
+
+            local humanoid =
+                getHumanoid()
+
+            if humanoid
+                and Settings.LaggerCarryEnabled then
+
+                humanoid.WalkSpeed =
+                    Settings.LaggerCarry
+
+            elseif humanoid then
+                humanoid.WalkSpeed =
+                    Settings.Speed
+            end
+        end
+    )
+
+local LaggerSpeedButton =
+    outsideButton(
+        "Lagger\nSpeed",
+        function(b)
+            Settings.LaggerSpeedEnabled =
+                not Settings.LaggerSpeedEnabled
+
+            setButtonState(
+                b,
+                Settings.LaggerSpeedEnabled
+            )
+
+            local humanoid =
+                getHumanoid()
+
+            if humanoid
+                and Settings.LaggerSpeedEnabled then
+
+                humanoid.WalkSpeed =
+                    Settings.LaggerSpeed
+
+            elseif humanoid then
+                humanoid.WalkSpeed =
+                    Settings.Speed
+            end
+        end
+    )
+
+function moveToCoordinate(x, z)
+    local root = getRoot()
+
+    if not root then
+        return
+    end
+
+    local rayOrigin =
+        Vector3.new(
+            x,
+            root.Position.Y + 150,
+            z
+        )
+
+    local rayDirection =
+        Vector3.new(
+            0,
+            -500,
+            0
+        )
+
+    local params =
+        RaycastParams.new()
+
+    params.FilterType =
+        Enum.RaycastFilterType.Exclude
+
+    params.FilterDescendantsInstances =
+        {getCharacter()}
+
+    local result =
+        workspace:Raycast(
+            rayOrigin,
+            rayDirection,
+            params
+        )
+
+    local y =
+        result
+        and result.Position.Y + 3
+        or root.Position.Y
+
+    root.CFrame =
+        CFrame.new(
+            x,
+            y,
+            z
+        )
 end
 
-local function GetClosestPlayer()
-	local closestPlayer, closestDist = nil, math.huge
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local dist = (LocalPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-			if dist < closestDist then
-				closestDist = dist
-				closestPlayer = player
-			end
-		end
-	end
-	return closestPlayer
+local function teleportDown()
+    local root = getRoot()
+
+    if not root then
+        return
+    end
+
+    local params =
+        RaycastParams.new()
+
+    params.FilterType =
+        Enum.RaycastFilterType.Exclude
+
+    params.FilterDescendantsInstances =
+        {getCharacter()}
+
+    local result =
+        workspace:Raycast(
+            root.Position,
+            Vector3.new(
+                0,
+                -1000,
+                0
+            ),
+            params
+        )
+
+    if result then
+        root.CFrame =
+            CFrame.new(
+                root.Position.X,
+                result.Position.Y + 3,
+                root.Position.Z
+            )
+    end
 end
 
-local function EquipItemInSlot(slotIndex)
-	local backpack = LocalPlayer:FindFirstChild("Backpack")
-	if backpack then
-		local tools = backpack:GetChildren()
-		if tools[slotIndex] and tools[slotIndex]:IsA("Tool") then
-			LocalPlayer.Character.Humanoid:EquipTool(tools[slotIndex])
-			return true
-		end
-	end
-	return false
+local jumpConnection
+
+local function setupCharacter(character)
+    local humanoid =
+        character:WaitForChild(
+            "Humanoid",
+            5
+        )
+
+    if humanoid then
+        humanoid.WalkSpeed =
+            Settings.Speed
+
+        if jumpConnection then
+            jumpConnection:Disconnect()
+            jumpConnection = nil
+        end
+    end
 end
 
--- --- CREACIÓN DE LA INTERFAZ DE USUARIO (GUI) ---
-
-ScreenGui = Create("ScreenGui", {Name = "ZaryonHubGui", Parent = PlayerGui, ResetOnSpawn = false})
-
--- 1. Botón de Menú
-MenuButton = Create("TextButton", {
-	Name = "MenuButton",
-	Parent = ScreenGui,
-	Size = UDim2.new(0, 50, 0, 50),
-	Position = UDim2.new(0, 30, 0.5, -25), -- Centro-izquierda, un poco alejado
-	BackgroundColor3 = COL_BLACK,
-	BorderSizePixel = 0,
-	Text = "Menú",
-	TextColor3 = COL_WHITE_GREY,
-	TextSize = 18,
-	Font = FONT_MAIN
-})
-local MenuButtonCorner = Create("UICorner", {Parent = MenuButton, CornerRadius = UDim.new(0, 5)})
-local MenuButtonStroke = Create("UIStroke", {Parent = MenuButton, Color = COL_GREY_BORDER, Thickness = 2})
-
--- 2. Marco del Menú Principal
-MenuFrame = Create("Frame", {
-	Name = "MenuFrame",
-	Parent = ScreenGui,
-	Size = UDim2.new(0, 500, 0, 350),
-	Position = UDim2.new(0.5, -250, 0.5, -175), -- Centrado
-	BackgroundColor3 = COL_BG,
-	BorderSizePixel = 0,
-	Visible = false
-})
-MakeDraggable(MenuFrame)
-local MenuCorner = Create("UICorner", {Parent = MenuFrame, CornerRadius = UDim.new(0, 8)})
-local MenuStroke = Create("UIStroke", {Parent = MenuFrame, Color = COL_BORDER, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
-
--- Título y Raya Separadora
-local MenuTitle = Create("TextLabel", {
-	Name = "MenuTitle",
-	Parent = MenuFrame,
-	Size = UDim2.new(1, -20, 0, 30),
-	Position = UDim2.new(0, 10, 0, 5),
-	BackgroundTransparency = 1,
-	Text = "ZaryonHub",
-	TextColor3 = COL_TXT,
-	TextSize = 24,
-	Font = FONT_MAIN,
-	TextXAlignment = Enum.TextXAlignment.Left
-})
-local TitleSeparator = Create("Frame", {
-	Name = "TitleSeparator",
-	Parent = MenuFrame,
-	Size = UDim2.new(1, -20, 0, 2),
-	Position = UDim2.new(0, 10, 0, 35),
-	BackgroundColor3 = COL_BORDER,
-	BorderSizePixel = 0
-})
-
--- 3. Lista de Categorías (Izquierda)
-CategoryList = Create("ScrollingFrame", {
-	Name = "CategoryList",
-	Parent = MenuFrame,
-	Size = UDim2.new(0, 120, 1, -45),
-	Position = UDim2.new(0, 10, 0, 40),
-	BackgroundTransparency = 1,
-	BorderSizePixel = 0,
-	CanvasSize = UDim2.new(0, 0, 0, 0),
-	ScrollBarThickness = 0
-})
-local CategoryListLayout = Create("UIListLayout", {Parent = CategoryList, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5)})
-
--- 4. Contenedor de Contenido (Derecha)
-ContentFrame = Create("ScrollingFrame", {
-	Name = "ContentFrame",
-	Parent = MenuFrame,
-	Size = UDim2.new(1, -150, 1, -45),
-	Position = UDim2.new(0, 140, 0, 40),
-	BackgroundTransparency = 1,
-	BorderSizePixel = 0,
-	CanvasSize = UDim2.new(0, 0, 0, 0),
-	ScrollBarThickness = 4,
-	ScrollBarImageColor3 = COL_WHITE_GREY
-})
-local ContentListLayout = Create("UIListLayout", {Parent = ContentFrame, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
-
--- --- CREACIÓN DE ELEMENTOS DEL MENÚ ---
-
--- Funciones para crear elementos de UI reusables
-
-local function CreateCategoryButton(name, layoutOrder)
-	local btn = Create("TextButton", {
-		Name = name .. "Category",
-		Parent = CategoryList,
-		Size = UDim2.new(1, -10, 0, 30),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = COL_TXT,
-		TextSize = 18,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		LayoutOrder = layoutOrder
-	})
-	local Padding = Create("UIPadding", {Parent = btn, PaddingLeft = UDim.new(0, 8)})
-	local Highlight = Create("Frame", {
-		Name = "Highlight",
-		Parent = btn,
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundColor3 = COL_WHITE,
-		BorderSizePixel = 0,
-		BackgroundTransparency = 1 -- Oculto por defecto
-	})
-	Create("UICorner", {Parent = Highlight, CornerRadius = UDim.new(0, 5)})
-	
-	CategoryButtons[name] = {Button = btn, Highlight = Highlight}
-	
-	btn.MouseButton1Click:Connect(function()
-		SwitchCategory(name)
-	end)
+if LocalPlayer.Character then
+    task.spawn(
+        setupCharacter,
+        LocalPlayer.Character
+    )
 end
 
-local function CreateContentHeader(name, parent)
-	local header = Create("TextLabel", {
-		Name = name .. "Header",
-		Parent = parent,
-		Size = UDim2.new(1, -10, 0, 25),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = COL_TXT,
-		TextSize = 20,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Left
-	})
-	local Separator = Create("Frame", {
-		Name = "Separator",
-		Parent = header,
-		Size = UDim2.new(1, 0, 0, 2),
-		Position = UDim2.new(0, 0, 1, -2),
-		BackgroundColor3 = COL_BORDER,
-		BorderSizePixel = 0
-	})
+LocalPlayer.CharacterAdded:Connect(
+    setupCharacter
+)
+
+UserInputService.JumpRequest:Connect(
+    function()
+        if Settings.InfinityJump then
+            local humanoid =
+                getHumanoid()
+
+            if humanoid then
+                humanoid:ChangeState(
+                    Enum.HumanoidStateType.Jumping
+                )
+            end
+
+        elseif Settings.JumpMode == "Hold" then
+            local humanoid =
+                getHumanoid()
+
+            if humanoid then
+                humanoid:ChangeState(
+                    Enum.HumanoidStateType.Jumping
+                )
+            end
+        end
+    end
+)
+
+local function toggleExternal(action)
+    if action == "Auto Right" then
+
+        Settings.AutoRight =
+            not Settings.AutoRight
+
+        if Settings.AutoRight then
+            Settings.AutoLeft = false
+
+            moveToCoordinate(
+                -74.875,
+                -24.304
+            )
+        end
+
+    elseif action == "Auto Left" then
+
+        Settings.AutoLeft =
+            not Settings.AutoLeft
+
+        if Settings.AutoLeft then
+            Settings.AutoRight = false
+
+            moveToCoordinate(
+                -74.875,
+                41.646
+            )
+        end
+
+    elseif action == "Carry Speed" then
+
+        Settings.CarrySpeedEnabled =
+            not Settings.CarrySpeedEnabled
+
+    elseif action == "Lagger Carry" then
+
+        Settings.LaggerCarryEnabled =
+            not Settings.LaggerCarryEnabled
+
+    elseif action == "Lagger Speed" then
+
+        Settings.LaggerSpeedEnabled =
+            not Settings.LaggerSpeedEnabled
+
+    elseif action == "TP Down" then
+
+        teleportDown()
+
+    elseif action == "Reset" then
+
+        local humanoid =
+            getHumanoid()
+
+        if humanoid then
+            humanoid.Health = 0
+        end
+
+    else
+
+        notify(
+            action ..
+            " is disabled in the safe Studio build."
+        )
+    end
 end
 
-local function CreateVariableSlider(name, parent, varName, min, max, default)
-	Variables[varName] = default
-	
-	local container = Create("Frame", {
-		Name = name .. "SliderContainer",
-		Parent = parent,
-		Size = UDim2.new(1, -10, 0, 35),
-		BackgroundTransparency = 1
-	})
-	local label = Create("TextLabel", {
-		Parent = container,
-		Size = UDim2.new(0.4, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = COL_TXT,
-		TextSize = 16,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Left
-	})
-	
-	local controlsFrame = Create("Frame", {
-		Parent = container,
-		Size = UDim2.new(0.6, -5, 1, 0),
-		Position = UDim2.new(0.4, 5, 0, 0),
-		BackgroundTransparency = 1
-	})
-	local controlsLayout = Create("UIListLayout", {Parent = controlsFrame, FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 5)})
+UserInputService.InputBegan:Connect(
+    function(input, processed)
+        if processed then
+            return
+        end
 
-	local btnMinus = Create("TextButton", {
-		Parent = controlsFrame,
-		Size = UDim2.new(0, 25, 0, 25),
-		BackgroundColor3 = COL_BLACK,
-		Text = "-",
-		TextColor3 = COL_TXT,
-		TextSize = 20,
-		Font = FONT_MAIN
-	})
-	Create("UICorner", {Parent = btnMinus, CornerRadius = UDim.new(0, 4)})
-	Create("UIStroke", {Parent = btnMinus, Color = COL_BORDER, Thickness = 1})
+        if input.UserInputType ~=
+            Enum.UserInputType.Keyboard then
+            return
+        end
 
-	local valueBox = Create("TextBox", {
-		Parent = controlsFrame,
-		Size = UDim2.new(0, 40, 0, 25),
-		BackgroundTransparency = 1,
-		Text = tostring(default),
-		TextColor3 = COL_TXT,
-		TextSize = 16,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Center,
-		ClearTextOnFocus = true
-	})
+        for action, key in pairs(
+            Keybinds
+        ) do
+            if input.KeyCode == key then
+                toggleExternal(action)
+                break
+            end
+        end
+    end
+)
 
-	local btnPlus = Create("TextButton", {
-		Parent = controlsFrame,
-		Size = UDim2.new(0, 25, 0, 25),
-		BackgroundColor3 = COL_BLACK,
-		Text = "+",
-		TextColor3 = COL_TXT,
-		TextSize = 20,
-		Font = FONT_MAIN
-	})
-	Create("UICorner", {Parent = btnPlus, CornerRadius = UDim.new(0, 4)})
-	Create("UIStroke", {Parent = btnPlus, Color = COL_BORDER, Thickness = 1})
+local menuOpen = false
 
-	-- Funcionalidad
-	local function updateValue(newVal)
-		Variables[varName] = math.clamp(newVal, min, max)
-		valueBox.Text = tostring(Variables[varName])
-		-- Actualizar lógica del juego si es necesario (ej. velocidad)
-		if varName == "POV" then workspace.CurrentCamera.FieldOfView = Variables[varName] end
-	end
+local function setMenu(open)
+    menuOpen = open
 
-	btnMinus.MouseButton1Click:Connect(function() updateValue(Variables[varName] - 1) end)
-	btnPlus.MouseButton1Click:Connect(function() updateValue(Variables[varName] + 1) end)
-	valueBox.FocusLost:Connect(function(enterPressed)
-		local num = tonumber(valueBox.Text)
-		if num then updateValue(num) else valueBox.Text = tostring(Variables[varName]) end
-	end)
-	
-	FeatureElements[varName] = {Label = label, ValueBox = valueBox}
+    Window.Visible = open
+
+    if open then
+
+        MenuButton.BackgroundColor3 =
+            COLORS.White
+
+        MenuButton.TextColor3 =
+            COLORS.Black
+
+        showPage("Speed")
+
+    else
+
+        MenuButton.BackgroundColor3 =
+            Settings.ButtonColor
+
+        MenuButton.TextColor3 =
+            Settings.ButtonTextColor
+    end
 end
 
-local function CreateToggle(name, parent, varName, default)
-	Variables[varName] = default
-	
-	local container = Create("Frame", {
-		Name = name .. "ToggleContainer",
-		Parent = parent,
-		Size = UDim2.new(1, -10, 0, 30),
-		BackgroundTransparency = 1
-	})
-	local label = Create("TextLabel", {
-		Parent = container,
-		Size = UDim2.new(0.7, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = COL_TXT,
-		TextSize = 16,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Left
-	})
+MenuButton.Activated:Connect(
+    function()
+        setMenu(not menuOpen)
+    end
+)
 
-	local toggleBtn = Create("TextButton", {
-		Parent = container,
-		Size = UDim2.new(0, 45, 0, 22),
-		Position = UDim2.new(0.7, 10, 0.5, -11),
-		BackgroundColor3 = COL_WHITE_GREY, -- Fondo desactivado
-		Text = "",
-		BorderSizePixel = 0
-	})
-	Create("UICorner", {Parent = toggleBtn, CornerRadius = UDim.new(1, 0)}) -- Ovalado
-	local toggleCircle = Create("Frame", {
-		Parent = toggleBtn,
-		Size = UDim2.new(0, 18, 0, 18),
-		Position = UDim2.new(1, -20, 0.5, -9), -- Círculo a la derecha por defecto (desactivado)
-		BackgroundColor3 = COL_WHITE, -- Círculo blanco
-		BorderSizePixel = 0
-	})
-	Create("UICorner", {Parent = toggleCircle, CornerRadius = UDim.new(1, 0)})
+Close.Activated:Connect(
+    function()
+        setMenu(false)
+    end
+)
 
-	-- Funcionalidad y Animación
-	local function updateToggleState(newState)
-		Variables[varName] = newState
-		local targetPos = newState and UDim2.new(0, 2, 0.5, -9) or UDim2.new(1, -20, 0.5, -9) -- Izquierda=Activado, Derecha=Desactivado
-		local targetBgCol = newState and COL_WHITE or COL_WHITE_GREY
-		local targetCircCol = newState and COL_BLACK or COL_WHITE
+local accumulated = 0
 
-		local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-		TweenService:Create(toggleCircle, tweenInfo, {Position = targetPos}):Play()
-		TweenService:Create(toggleBtn, tweenInfo, {BackgroundColor3 = targetBgCol}):Play()
-		TweenService:Create(toggleCircle, tweenInfo, {BackgroundColor3 = targetCircCol}):Play()
-		
-		-- Actualizar Botones Rápidos si existen
-		if FeatureElements[varName] and FeatureElements[varName].FastButton then
-			UpdateFastButtonVisual(FeatureElements[varName].FastButton, newState)
-		end
-		-- Ejecutar lógica específica si es necesario
-		HandleToggleLogic(varName, newState)
-	end
+RunService.Heartbeat:Connect(
+    function(dt)
 
-	toggleBtn.MouseButton1Click:Connect(function()
-		updateToggleState(not Variables[varName])
-	end)
-	
-	-- Establecer estado inicial sin animación
-	updateToggleState(default)
-	
-	FeatureElements[varName] = {Label = label, ToggleBtn = toggleBtn, ToggleCircle = toggleCircle}
-end
+        accumulated += dt
 
-local function CreateModeSelector(name, parent, varName, modes, default)
-	Variables[varName] = default
-	
-	local container = Create("Frame", {
-		Name = name .. "ModeContainer",
-		Parent = parent,
-		Size = UDim2.new(1, -10, 0, 35),
-		BackgroundTransparency = 1
-	})
-	local label = Create("TextLabel", {
-		Parent = container,
-		Size = UDim2.new(0.4, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = COL_TXT,
-		TextSize = 16,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Left
-	})
+        local humanoid =
+            getHumanoid()
 
-	local modesFrame = Create("Frame", {
-		Parent = container,
-		Size = UDim2.new(0, 140, 0, 25),
-		Position = UDim2.new(0.4, 5, 0.5, -12),
-		BackgroundColor3 = COL_BLACK,
-		BorderSizePixel = 0
-	})
-	Create("UICorner", {Parent = modesFrame, CornerRadius = UDim.new(0, 4)})
-	Create("UIStroke", {Parent = modesFrame, Color = COL_BORDER, Thickness = 1})
-	local modesLayout = Create("UIListLayout", {Parent = modesFrame, FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder})
+        if humanoid then
 
-	local modeButtons = {}
-	for i, mode in ipairs(modes) do
-		local modeBtn = Create("TextButton", {
-			Parent = modesFrame,
-			Size = UDim2.new(1 / #modes, 0, 1, 0),
-			BackgroundTransparency = 1,
-			Text = mode,
-			TextColor3 = COL_TXT,
-			TextSize = 14,
-			Font = FONT_MAIN,
-			LayoutOrder = i
-		})
-		
-		if i < #modes then
-			local separator = Create("Frame", {
-				Parent = modeBtn,
-				Size = UDim2.new(0, 1, 1, 0),
-				Position = UDim2.new(1, 0, 0, 0),
-				BackgroundColor3 = COL_BORDER,
-				BorderSizePixel = 0
-			})
-		end
-		
-		modeButtons[mode] = modeBtn
-		
-		modeBtn.MouseButton1Click:Connect(function()
-			SetMode(varName, mode)
-		end)
-	end
+            if Settings.LaggerCarryEnabled then
 
-	-- Funcionalidad
-	function SetMode(vName, selectedMode)
-		Variables[vName] = selectedMode
-		for mode, btn in pairs(modeButtons) do
-			if mode == selectedMode then
-				AnimateColor(btn, "TextColor3", COL_BLACK, 0.1)
-				btn.BackgroundTransparency = 0
-				btn.BackgroundColor3 = COL_WHITE
-			else
-				AnimateColor(btn, "TextColor3", COL_TXT, 0.1)
-				btn.BackgroundTransparency = 1
-			end
-		end
-		-- Lógica específica
-		if vName == "JumpMode" then HandleJumpModeLogic(selectedMode) end
-	end
-	
-	-- Establecer modo inicial
-	SetMode(varName, default)
-	
-	FeatureElements[varName] = {Label = label, ModesFrame = modesFrame, Buttons = modeButtons}
-end
+                humanoid.WalkSpeed =
+                    Settings.LaggerCarry
 
-local function CreateColorPicker(name, parent, varName)
-	local container = Create("Frame", {
-		Name = name .. "PickerContainer",
-		Parent = parent,
-		Size = UDim2.new(1, -10, 0, 30),
-		BackgroundTransparency = 1
-	})
-	local label = Create("TextLabel", {
-		Parent = container,
-		Size = UDim2.new(0.6, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = COL_TXT,
-		TextSize = 16,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Left
-	})
+            elseif Settings.LaggerSpeedEnabled then
 
-	local colorPreview = Create("TextButton", {
-		Parent = container,
-		Size = UDim2.new(0, 25, 0, 25),
-		Position = UDim2.new(0.6, 10, 0.5, -12),
-		BackgroundColor3 = COL_WHITE_GREY, -- Color por defecto (blanco/gris)
-		Text = "",
-		BorderSizePixel = 0
-	})
-	Create("UICorner", {Parent = colorPreview, CornerRadius = UDim.new(0, 4)})
-	local colorStroke = Create("UIStroke", {Parent = colorPreview, Color = COL_BLACK, Thickness = 1})
+                humanoid.WalkSpeed =
+                    Settings.LaggerSpeed
 
-	-- Panel de colores básico (fuera del menú)
-	local colorsPanel = Create("Frame", {
-		Parent = ScreenGui,
-		Size = UDim2.new(0, 150, 0, 30),
-		BackgroundColor3 = COL_BLACK,
-		Visible = false
-	})
-	local cpStroke = Create("UIStroke", {Parent = colorsPanel, Color = COL_GREY_BORDER, Thickness = 1})
-	Create("UICorner", {Parent = colorsPanel, CornerRadius = UDim.new(0, 4)})
-	local colorsLayout = Create("UIListLayout", {Parent = colorsPanel, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 3)})
+            elseif Settings.CarrySpeedEnabled then
 
-	local basicColors = {Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 165, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 192, 203), Color3.fromRGB(128, 0, 128), Color3.fromRGB(0, 0, 255)}
-	for _, col in pairs(basicColors) do
-		local btn = Create("TextButton", {
-			Parent = colorsPanel,
-			Size = UDim2.new(0, 20, 1, -6),
-			Position = UDim2.new(0, 3, 0, 3),
-			BackgroundColor3 = col,
-			Text = ""
-		})
-		Create("UICorner", {Parent = btn, CornerRadius = UDim.new(0, 4)})
-		
-		btn.MouseButton1Click:Connect(function()
-			ApplyColorChange(varName, col)
-			colorPreview.BackgroundColor3 = col
-			colorsPanel.Visible = false
-		end)
-	end
+                humanoid.WalkSpeed =
+                    Settings.CarrySpeed
 
-	colorPreview.MouseButton1Click:Connect(function()
-		colorsPanel.Visible = not colorsPanel.Visible
-		if colorsPanel.Visible then
-			colorsPanel.Position = UDim2.new(0, colorPreview.AbsolutePosition.X + colorPreview.AbsoluteSize.X + 10, 0, colorPreview.AbsolutePosition.Y)
-		end
-	end)
-	
-	FeatureElements[varName] = {Label = label, ColorPreview = colorPreview}
-end
+            else
 
-local function CreateKeybindButton(name, parent, actionName)
-	local container = Create("Frame", {
-		Name = name .. "KeybindContainer",
-		Parent = parent,
-		Size = UDim2.new(1, -10, 0, 30),
-		BackgroundTransparency = 1
-	})
-	local label = Create("TextLabel", {
-		Parent = container,
-		Size = UDim2.new(0.6, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = COL_TXT,
-		TextSize = 16,
-		Font = FONT_MAIN,
-		TextXAlignment = Enum.TextXAlignment.Left
-	})
+                humanoid.WalkSpeed =
+                    Settings.Speed
+            end
 
-	local bindBtn = Create("TextButton", {
-		Parent = container,
-		Size = UDim2.new(0, 50, 0, 25),
-		Position = UDim2.new(0.6, 10, 0.5, -12),
-		BackgroundColor3 = COL_BLACK,
-		Text = Keybinds[actionName].Name,
-		TextColor3 = COL_TXT,
-		TextSize = 16,
-		Font = FONT_MAIN
-	})
-	Create("UICorner", {Parent = bindBtn, CornerRadius = UDim.new(0, 4)})
-	Create("UIStroke", {Parent = bindBtn, Color = COL_BORDER, Thickness = 1})
+            if Settings.UnWalk then
+                humanoid.AutoRotate = false
+            else
+                humanoid.AutoRotate = true
+            end
+        end
 
-	-- Funcionalidad de Rebinding
-	local listening = false
-	bindBtn.MouseButton1Click:Connect(function()
-		if not listening then
-			listening = true
-			bindBtn.Text = "..."
-			local connection
-			connection = UserInputService.InputBegan:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.Keyboard then
-					Keybinds[actionName] = input.KeyCode
-					bindBtn.Text = input.KeyCode.Name
-					listening = false
-					connection:Disconnect()
-				elseif input.UserInputType == Enum.UserInputType.MouseButton1 then -- Cancelar con click
-					bindBtn.Text = Keybinds[actionName].Name
-					listening = false
-					connection:Disconnect()
-				end
-			end)
-		end
-	end)
-end
+        if Settings.FOV then
 
--- --- DEFINICIÓN DE CATEGORÍAS Y CONTENIDO ---
+            local camera =
+                workspace.CurrentCamera
 
-CreateCategoryButton("Speed", 1)
-CreateCategoryButton("Combat", 2)
-CreateCategoryButton("Steal", 3)
-CreateCategoryButton("Movement", 4)
-CreateCategoryButton("Misc", 5)
-CreateCategoryButton("Visual", 6)
-CreateCategoryButton("Interface", 7)
-CreateCategoryButton("Keybinds", 8)
+            if camera
+                and math.abs(
+                    camera.FieldOfView
+                    - Settings.FOV
+                ) > 0.1 then
 
--- Función para cambiar de categoría
-function SwitchCategory(categoryName)
-	CurrentCategory = categoryName
-	-- Actualizar resaltado de botones de categoría
-	for name, data in pairs(CategoryButtons) do
-		if name == categoryName then
-			AnimateColor(data.Highlight, "BackgroundTransparency", 0, 0.1)
-			AnimateColor(data.Button, "TextColor3", COL_BLACK, 0.1)
-		else
-			AnimateColor(data.Highlight, "BackgroundTransparency", 1, 0.1)
-			AnimateColor(data.Button, "TextColor3", COL_TXT, 0.1)
-		end
-	end
-	
-	-- Limpiar contenido actual
-	for _, child in pairs(ContentFrame:GetChildren()) do
-		if not child:IsA("UIListLayout") then child:Destroy() end
-	end
-	
-	-- Cargar contenido de la categoría seleccionada
-	if categoryName == "Speed" then
-		CreateContentHeader("Speed", ContentFrame)
-		CreateVariableSlider("Speed", ContentFrame, "Speed", 16, 200, 59)
-		CreateVariableSlider("Carry Speed", ContentFrame, "CarrySpeed", 10, 100, 29)
-		CreateVariableSlider("Lagger Carry", ContentFrame, "LaggerCarry", 10, 100, 24.5)
-		CreateVariableSlider("Lagger Speed", ContentFrame, "LaggerSpeed", 5, 50, 15)
-		CreateVariableSlider("Aimbot Speed", ContentFrame, "AimbotSpeed", 1, 100, 45)
-		
-	elseif categoryName == "Combat" then
-		CreateContentHeader("Combat", ContentFrame)
-		CreateToggle("Auto Right", ContentFrame, "AutoRight", false)
-		CreateToggle("Auto Left", ContentFrame, "AutoLeft", false)
-		CreateToggle("Bat TP", ContentFrame, "BatTP", false)
-		CreateToggle("Auto Bat Bypass", ContentFrame, "AntiBatBypass", false)
-		CreateToggle("Drop Brainrot", ContentFrame, "DropBrainrot", false)
-		CreateToggle("TP Down", ContentFrame, "TPDown", false)
-		
-	elseif categoryName == "Steal" then
-		CreateContentHeader("Steal", ContentFrame)
-		CreateVariableSlider("Steal Speed", ContentFrame, "StealSpeed", 16, 200, 45)
-		CreateToggle("Auto Steal", ContentFrame, "AutoSteal", false)
-		
-	elseif categoryName == "Movement" then
-		CreateContentHeader("Movement", ContentFrame)
-		CreateToggle("UnWalk", ContentFrame, "UnWalk", false)
-		CreateModeSelector("Jump", ContentFrame, "JumpMode", {"Manual", "Hold"}, "Manual")
-		
-	elseif categoryName == "Misc" then
-		CreateContentHeader("Misc", ContentFrame)
-		CreateToggle("Infinity Jump", ContentFrame, "InfinityJump", false)
-		CreateToggle("Anti Radgoll", ContentFrame, "AntiRadgoll", false)
-		
-	elseif categoryName == "Visual" then
-		CreateContentHeader("Visual", ContentFrame)
-		CreateToggle("Anti Lag", ContentFrame, "AntiLag", false)
-		CreateVariableSlider("Pov", ContentFrame, "POV", 30, 120, 90)
-		
-	elseif categoryName == "Interface" then
-		CreateContentHeader("Interface", ContentFrame)
-		CreateColorPicker("Interface Borders", ContentFrame, "BorderColor")
-		CreateColorPicker("Basic Interface", ContentFrame, "BgColor")
-		CreateColorPicker("Boton Color", ContentFrame, "ButtonColor")
-		CreateColorPicker("Boton Text", ContentFrame, "TextColor")
-		
-	elseif categoryName == "Keybinds" then
-		CreateContentHeader("Keybinds", ContentFrame)
-		CreateKeybindButton("Auto Right", ContentFrame, "AutoRight")
-		CreateKeybindButton("Auto Left", ContentFrame, "AutoLeft")
-		CreateKeybindButton("Bat TP", ContentFrame, "BatTP")
-		CreateKeybindButton("Anti Bat Bypass", ContentFrame, "AntiBatBypass")
-		CreateKeybindButton("Carry Speed", ContentFrame, "CarrySpeed")
-		CreateKeybindButton("Lagger Carry", ContentFrame, "LaggerCarry")
-		CreateKeybindButton("Lagger Speed", ContentFrame, "LaggerSpeed")
-		CreateKeybindButton("Drop Brainrot", ContentFrame, "DropBrainrot")
-		CreateKeybindButton("TP Down", ContentFrame, "TPDown")
-		CreateKeybindButton("Reset", ContentFrame, "Reset")
-	end
-end
+                camera.FieldOfView =
+                    Settings.FOV
+            end
+        end
 
--- --- CREACIÓN DE BOTONES RÁPIDOS Y AUTO STEALER (DERECHA) ---
+        if Settings.TPDown
+            and accumulated >= 0.25 then
 
--- 5. Marco para Botones Rápidos
-FastButtonsFrame = Create("Frame", {
-	Name = "FastButtonsFrame",
-	Parent = ScreenGui,
-	Size = UDim2.new(0, 120, 0, 0), -- Altura dinámica
-	Position = UDim2.new(1, -150, 0.5, 0), -- Derecha centrado
-	BackgroundTransparency = 1,
-	AnchorPoint = Vector2.new(0, 0.5)
-})
-local FastButtonsLayout = Create("UIListLayout", {Parent = FastButtonsFrame, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), HorizontalAlignment = Enum.HorizontalAlignment.Center})
+            accumulated = 0
 
-local function CreateFastButton(text, varName, layoutOrder, textDown)
-	local btn = Create("TextButton", {
-		Parent = FastButtonsFrame,
-		Size = UDim2.new(0, 80, 0, 50),
-		BackgroundColor3 = COL_BLACK,
-		Text = text,
-		TextColor3 = COL_TXT,
-		TextSize = 18,
-		Font = FONT_MAIN,
-		LayoutOrder = layoutOrder
-	})
-	Create("UICorner", {Parent = btn, CornerRadius = UDim.new(0, 5)})
-	local stroke = Create("UIStroke", {Parent = btn, Color = COL_GREY_BORDER, Thickness = 1})
+            teleportDown()
+        end
+    end
+)
 
-	if textDown then
-		local labelDown = Create("TextLabel", {
-			Parent = btn,
-			Size = UDim2.new(1, 0, 0.5, 0),
-			Position = UDim2.new(0, 0, 0.5, 0),
-			BackgroundTransparency = 1,
-			Text = textDown,
-			TextColor3 = COL_TXT,
-			TextSize = 16,
-			Font = FONT_MAIN,
-			TextYAlignment = Enum.TextYAlignment.Top
-		})
-		btn.TextYAlignment = Enum.TextYAlignment.Bottom
-		btn.Size = UDim2.new(0, 80, 0, 60)
-	end
-	
-	-- Guardar referencia para actualizar visuales desde el menú
-	if FeatureElements[varName] then FeatureElements[varName].FastButton = btn end
+showPage("Speed")
+setMenu(false)
 
-	btn.MouseButton1Click:Connect(function()
-		local newState = not Variables[varName]
-		-- Actualizar variable y el menú si está abierto
-		if FeatureElements[varName] and FeatureElements[varName].ToggleBtn then
-			local targetCircPos = newState and UDim2.new(0, 2, 0.5, -9) or UDim2.new(1, -20, 0.5, -9)
-			local targetBgCol = newState and COL_WHITE or COL_WHITE_GREY
-			FeatureElements[varName].ToggleCircle.Position = targetCircPos
-			FeatureElements[varName].ToggleBtn.BackgroundColor3 = targetBgCol
-			FeatureElements[varName].ToggleCircle.BackgroundColor3 = newState and COL_BLACK or COL_WHITE
-		end
-		Variables[varName] = newState
-		UpdateFastButtonVisual(btn, newState)
-		HandleToggleLogic(varName, newState)
-	end)
-	
-	UpdateFastButtonVisual(btn, Variables[varName])
-end
-
-local function UpdateFastButtonVisual(btn, state)
-	if state then
-		AnimateColor(btn, "BackgroundColor3", COL_WHITE, 0.1)
-		AnimateColor(btn, "TextColor3", COL_BLACK, 0.1)
-		if btn:FindFirstChild("TextLabel") then AnimateColor(btn.TextLabel, "TextColor3", COL_BLACK, 0.1) end
-	else
-		AnimateColor(btn, "BackgroundColor3", COL_BLACK, 0.1)
-		AnimateColor(btn, "TextColor3", COL_TXT, 0.1)
-		if btn:FindFirstChild("TextLabel") then AnimateColor(btn.TextLabel, "TextColor3", COL_TXT, 0.1) end
-	end
-end
-
--- Botones Rápidos (Orden según imagen de referencia 0.png)
-CreateFastButton("Bat TP", "BatTP", 1)
-CreateFastButton("Auto", "AutoLeft", 2, "Left")
-CreateFastButton("Auto", "AutoRight", 3, "Right")
-CreateFastButton("TP", "TPDown", 4, "Down")
-CreateFastButton("Carry", "CarrySpeed", 5, "Speed")
-CreateFastButton("Anti Bat", "AntiBatBypass", 6, "Bypass")
-CreateFastButton("Lagger", "LaggerCarry", 7, "Carry")
-CreateFastButton("Reset", "Reset", 8) -- Reset no es toggle, pero sigo instrucciones visuales
-CreateFastButton("Lagger", "LaggerSpeed", 9, "Speed")
-
--- Ajustar altura del marco
-FastButtonsFrame.Size = UDim2.new(0, 120, 0, FastButtonsLayout.AbsoluteContentSize.Y)
-
--- 6. Panel de Auto Stealer (Óvalo horizontal)
-AutoStealerFrame = Create("Frame", {
-	Name = "AutoStealerFrame",
-	Parent = ScreenGui,
-	Size = UDim2.new(0, 300, 0, 40),
-	Position = UDim2.new(1, -320, 1, -60), -- Abajo derecha
-	BackgroundColor3 = COL_BLACK,
-	BorderSizePixel = 0
-})
-local AS_Corner = Create("UICorner", {Parent = AutoStealerFrame, CornerRadius = UDim.new(1, 0)}) -- Óvalo
-local AS_Stroke = Create("UIStroke", {Parent = AutoStealerFrame, Color = COL_BORDER, Thickness = 2})
-
--- FPS y Ping
-local InfoFrame = Create("Frame", {Parent = AutoStealerFrame, Size = UDim2.new(0.4, 0, 1, -6), Position = UDim2.new(0.6, -3, 0, 3), BackgroundTransparency = 1})
-local InfoLayout = Create("UIListLayout", {Parent = InfoFrame, FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8)})
-local SepLine = Create("Frame", {Parent = AutoStealerFrame, Size = UDim2.new(0, 2, 1, -10), Position = UDim2.new(0.6, -5, 0, 5), BackgroundColor3 = COL_BORDER, BorderSizePixel = 0})
-
-local FPSLabel = Create("TextLabel", {Parent = InfoFrame, Size = UDim2.new(0, 60, 1, 0), BackgroundTransparency = 1, Text = "FPS: -", TextColor3 = COL_TXT, TextSize = 14, Font = FONT_MAIN})
-local PingLabel = Create("TextLabel", {Parent = InfoFrame, Size = UDim2.new(0, 60, 1, 0), BackgroundTransparency = 1, Text = "Ping: -", TextColor3 = COL_TXT, TextSize = 14, Font = FONT_MAIN})
-
--- Barra de Progreso (dentro del óvalo)
-local ProgressContainer = Create("Frame", {
-	Parent = AutoStealerFrame,
-	Size = UDim2.new(0.6, -15, 0, 20),
-	Position = UDim2.new(0, 10, 0.5, -10),
-	BackgroundColor3 = COL_BLACK,
-	BorderSizePixel = 0
-})
-Create("UICorner", {Parent = ProgressContainer, CornerRadius = UDim.new(1, 0)})
-local ProgressStroke = Create("UIStroke", {Parent = ProgressContainer, Color = COL_BORDER, Thickness = 1})
-
-local ProgressBar = Create("Frame", {
-	Name = "ProgressBar",
-	Parent = ProgressContainer,
-	Size = UDim2.new(0, 0, 1, 0),
-	BackgroundColor3 = COL_WHITE_GREY, -- Color de progreso
-	BorderSizePixel = 0
-})
-Create("UICorner", {Parent = ProgressBar, CornerRadius = UDim.new(1, 0)})
-
-local ProgressText = Create("TextLabel", {
-	Parent = ProgressContainer,
-	Size = UDim2.new(1, 0, 1, 0),
-	BackgroundTransparency = 1,
-	Text = "0%",
-	TextColor3 = COL_TXT,
-	TextSize = 14,
-	Font = FONT_MAIN
-})
-
--- --- LÓGICA DE ACTUALIZACIÓN Y FUNCIONES DE TRAMPAS ---
-
--- Actualización de FPS y Ping
-local lastTime = tick()
-local frameCount = 0
-RunService.RenderStepped:Connect(function()
-	frameCount += 1
-	local now = tick()
-	if now - lastTime >= 1 then
-		FPSLabel.Text = "FPS: " .. math.floor(frameCount / (now - lastTime))
-		frameCount = 0
-		lastTime = now
-		
-		-- Ping (aproximado usando stats)
-		local ping = math.floor(Stats.Network.ServerTickRate:GetValue() + 0.5) -- No es ping exacto, pero sirve
-		PingLabel.Text = "Ping: " .. ping .. "ms"
-	end
-end)
-
--- Lógica del Auto Stealer y ProximityPrompts
-local CurrentProximityPrompt = nil
-local StealProgress = 0
-local lastPlayerPos = Vector3.new()
-local stopTimer = 0
-
-UserInputService.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Keyboard then
-		for action, key in pairs(Keybinds) do
-			if input.KeyCode == key then
-				if action == "Reset" then
-					LocalPlayer.Character.Humanoid.Health = 0
-				else
-					-- Trigger toggle
-					local newState = not Variables[action]
-					if FeatureElements[action] and FeatureElements[action].ToggleBtn then FeatureElements[action].ToggleBtn.MouseButton1Click:Fire() end
-					if FeatureElements[action] and FeatureElements[action].FastButton then FeatureElements[action].FastButton.MouseButton1Click:Fire() end
-				end
-			end
-		end
-	end
-end)
-
-local function HandleProximityPrompt(prompt)
-	if Variables.AutoSteal and StealProgress >= 1 then
-		prompt:InputHoldBegin()
-		task.wait(prompt.HoldDuration) -- Saltar HoldDuration
-		prompt:InputHoldEnd()
-	end
-end
-
-ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
-	if player == LocalPlayer then CurrentProximityPrompt = prompt end
-end)
-ProximityPromptService.PromptButtonHoldEnded:Connect(function(prompt, player)
-	if player == LocalPlayer then CurrentProximityPrompt = nil end
-end)
-
--- Main Loop de Actualización (Heartbeat)
-RunService.Heartbeat:Connect(function(dt)
-	local character = LocalPlayer.Character
-	if not character or not character:FindFirstChild("Humanoid") or not character:FindFirstChild("HumanoidRootPart") then return end
-	local humanoid = character.Humanoid
-	local hrp = character.HumanoidRootPart
-
-	-- Lógica de Velocidad Base y Multiplicadores
-	local baseSpeed = Variables.Speed
-	if Variables.CarrySpeed then baseSpeed = Variables.CarrySpeed end
-	if Variables.LaggerCarry then baseSpeed = Variables.LaggerCarry end
-	if Variables.LaggerSpeed then baseSpeed = Variables.LaggerSpeed end
-	if Variables.AutoLeft or Variables.AutoRight then baseSpeed = 59 end
-	
-	humanoid.WalkSpeed = baseSpeed
-
-	-- TP Down
-	if Variables.TPDown then
-		local ray = Ray.new(hrp.Position, Vector3.new(0, -500, 0))
-		local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, {character})
-		if hit then
-			hrp.CFrame = CFrame.new(pos + Vector3.new(0, humanoid.HipHeight + 0.5, 0))
-		end
-		-- Desactivar después de un uso (como describe la instrucción)
-		if FeatureElements["TPDown"] and FeatureElements["TPDown"].ToggleBtn then FeatureElements["TPDown"].ToggleBtn.MouseButton1Click:Fire() end
-		if FeatureElements["TPDown"] and FeatureElements["TPDown"].FastButton then FeatureElements["TPDown"].FastButton.MouseButton1Click:Fire() end
-	end
-
-	-- Bat TP
-	if Variables.BatTP then
-		local targetPlayer = GetClosestPlayer()
-		if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-			local targetHrp = targetPlayer.Character.HumanoidRootPart
-			local rotationSpeed = Variables.AimbotSpeed / 10 -- Ajustar velocidad de giro
-			hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(0, 5, 0)) * CFrame.Angles(0, math.rad(tick() * rotationSpeed * 360), 0)
-			
-			-- Equipar y hacer clicks
-			EquipItemInSlot(1)
-			-- Lógica de click automatizada (requiere simulación de input o eventos remotos del juego)
-			-- Esto es complejo en Roblox sin soporte del juego. Se asume que EquipItem y Click son eventos.
-			-- *Simulación de click aquí si fuera posible*
-		else
-			Variables.BatTP = false -- Desactivar si no hay objetivo
-		end
-	end
-	
-	-- Anti Bat Bypass (Volar hacia objetivo)
-	if Variables.AntiBatBypass then
-		local targetPlayer = GetClosestPlayer()
-		if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-			local targetHrp = targetPlayer.Character.HumanoidRootPart
-			local moveDir = (targetHrp.Position - hrp.Position).Unit
-			hrp.Velocity = moveDir * Variables.AimbotSpeed -- Usar AimbotSpeed como velocidad de vuelo
-			-- Evitar caídas
-			if hrp.Velocity.Y < 0 then hrp.Velocity = Vector3.new(hrp.Velocity.X, 0, hrp.Velocity.Z) end
-
-			EquipItemInSlot(1)
-			-- *Simulación de click aquí si fuera posible cada 0.5s*
-		else
-			hrp.Velocity = Vector3.new(0, 0, 0) -- Detener vuelo
-		end
-	end
-
-	-- Auto Right / Auto Left (Moverse a coordenadas)
-	local targetX = -74.875
-	local targetZ = Variables.AutoRight and -24.304 or (Variables.AutoLeft and 41.646 or nil)
-	if targetZ then
-		local targetPos = Vector3.new(targetX, hrp.Position.Y, targetZ)
-		humanoid:MoveTo(targetPos)
-	end
-
-	-- Drop Brainrot
-	if Variables.DropBrainrot then
-		-- Volar 50 studs arriba
-		local bodyVelocity = hrp:FindFirstChild("DropBrainrotBV")
-		if not bodyVelocity then
-			bodyVelocity = Instance.new("BodyVelocity")
-			bodyVelocity.Name = "DropBrainrotBV"
-			bodyVelocity.Velocity = Vector3.new(0, 100, 0) -- Velocidad de subida
-			bodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
-			bodyVelocity.Parent = hrp
-		end
-		
-		-- Comprobar altura
-		local startY = bodyVelocity:GetAttribute("StartY")
-		if not startY then
-			bodyVelocity:SetAttribute("StartY", hrp.Position.Y)
-			startY = hrp.Position.Y
-		end
-		
-		if hrp.Position.Y >= startY + 50 then
-			bodyVelocity:Destroy() -- Detener subida
-			-- TP Down
-			local ray = Ray.new(hrp.Position, Vector3.new(0, -500, 0))
-			local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, {character})
-			if hit then
-				hrp.CFrame = CFrame.new(pos + Vector3.new(0, humanoid.HipHeight + 0.5, 0))
-			end
-			-- Desactivar
-			if FeatureElements["DropBrainrot"] and FeatureElements["DropBrainrot"].ToggleBtn then FeatureElements["DropBrainrot"].ToggleBtn.MouseButton1Click:Fire() end
-			if FeatureElements["DropBrainrot"] and FeatureElements["DropBrainrot"].FastButton then FeatureElements["DropBrainrot"].FastButton.MouseButton1Click:Fire() end
-		end
-	end
-
-	-- Lógica de Auto Stealer (Progreso)
-	local isMoving = (hrp.Position - lastPlayerPos).Magnitude > 0.1 or Variables.AutoRight or Variables.AutoLeft
-	lastPlayerPos = hrp.Position
-	
-	if isMoving then
-		stopTimer = 0
-		StealProgress = math.clamp(StealProgress + dt / 3, 0, 1) -- 3 segundos para llegar al 100%
-	else
-		stopTimer += dt
-		if stopTimer >= 3 then
-			StealProgress = 0
-		end
-	end
-	
-	-- Actualizar Barra Visual
-	ProgressBar.Size = UDim2.new(StealProgress, 0, 1, 0)
-	ProgressText.Text = math.floor(StealProgress * 100) .. "%"
-	
-	-- Interactuar con ProximityPrompt al 100%
-	if StealProgress >= 1 and Variables.AutoSteal then
-		-- Buscar prompt cercano
-		for _, part in pairs(workspace:GetDescendants()) do
-			if part:IsA("ProximityPrompt") then
-				local dist = (hrp.Position - part.Parent.Position).Magnitude
-				if dist <= part.MaxActivationDistance then
-					HandleProximityPrompt(part)
-					break
-				end
-			end
-		end
-	end
-end)
-
--- Lógica de Jump (Hold vs Manual)
-UserInputService.JumpRequest:Connect(function()
-	if Variables.JumpMode == "Hold" and Variables.HoldJumpActive then
-		LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	end
-end)
-UserInputService.InputBegan:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space then Variables.HoldJumpActive = true end
-end)
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space then Variables.HoldJumpActive = false end
-end)
-
--- --- LÓGICA DE INTERFAZ Y CONFIGURACIÓN ---
-
--- Apertura/Cierre del Menú
-MenuButton.MouseButton1Click:Connect(function()
-	MenuOpen = not MenuOpen
-	MenuFrame.Visible = MenuOpen
-	colorsPanel.Visible = false -- Cerrar color picker si está abierto
-	
-	-- Animación visual del botón de menú
-	local targetBgCol = MenuOpen and COL_WHITE or COL_BLACK
-	local targetTxtCol = MenuOpen and COL_BLACK or COL_WHITE_GREY
-	AnimateColor(MenuButton, "BackgroundColor3", targetBgCol, 0.15)
-	AnimateColor(MenuButton, "TextColor3", targetTxtCol, 0.15)
-end)
-
--- Cambios de Color de Interfaz
-function ApplyColorChange(varName, color)
-	if varName == "BorderColor" then
-		COL_BORDER = color
-		MenuStroke.Color = color
-		-- Actualizar todos los bordes
-		for _, element in pairs(FeatureElements) do
-			if element.ToggleBtn then element.ToggleBtn.UIStroke.Color = color end
-			if element.ModesFrame then element.ModesFrame.UIStroke.Color = color end
-			if element.ValueBox then element.ValueBox.Parent.UIStroke.Color = color end
-			if element.ColorPreview then element.ColorPreview.UIStroke.Color = color end
-		end
-		TitleSeparator.BackgroundColor3 = color
-		-- Categorías separadores
-		for _, child in pairs(ContentFrame:GetChildren()) do
-			if child:FindFirstChild("Separator") then child.Separator.BackgroundColor3 = color end
-		end
-
-	elseif varName == "BgColor" then
-		COL_BG = color
-		MenuFrame.BackgroundColor3 = color
-		CategoryList.BackgroundColor3 = color -- scrolling frames
-		ContentFrame.BackgroundColor3 = color
-
-	elseif varName == "ButtonColor" then
-		COL_BUTTON = color
-		-- Actualizar todos los botones (excluyendo los rápidos)
-		for _, element in pairs(FeatureElements) do
-			if element.ToggleBtn then element.ToggleBtn.BackgroundColor3 = color end
-			-- ... otros botones dentro del menú
-		end
-		-- Re-activar animaciones de botones rápidos
-		for _, data in pairs(FeatureElements) do
-			if data.FastButton then UpdateFastButtonVisual(data.FastButton, Variables[data.FastButton.Name:gsub("Fast", "")]) end
-		end
-
-	elseif varName == "TextColor" then
-		COL_TXT = color
-		MenuTitle.TextColor3 = color
-		for _, btnData in pairs(CategoryButtons) do btnData.Button.TextColor3 = color end
-		for _, element in pairs(FeatureElements) do
-			if element.Label then element.Label.TextColor3 = color end
-			if element.ValueBox then element.ValueBox.TextColor3 = color end
-			-- ... otros textos
-		end
-	end
-end
-
--- Funciones de Lógica de Toggles Específicos
-function HandleToggleLogic(varName, newState)
-	if varName == "UnWalk" then
-		local humanoid = LocalPlayer.Character.Humanoid
-		if newState then
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, false)
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-			-- Congelar animaciones
-			for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do track:Stop() end
-		else
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-		end
-	elseif varName == "AntiRadgoll" then
-		-- Lógica para prevenir o curar Ragdoll instantáneamente
-		-- Depende del sistema de ragdoll del juego
-	elseif varName == "AntiLag" then
-		-- Visualmente para el jugador:
-		for _, part in pairs(workspace:GetDescendants()) do
-			if part:IsA("BasePart") then
-				if newState then
-					part:SetAttribute("OriginalMaterial", part.Material)
-					part.Material = Enum.Material.Plastic
-					-- Detener animaciones visuales (como las de 'noobini pizzanini')
-					if part.Parent:FindFirstChild("Humanoid") then
-						for _, track in pairs(part.Parent.Humanoid:GetPlayingAnimationTracks()) do track:AdjustSpeed(0) end
-					end
-				else
-					local originalMaterial = part:GetAttribute("OriginalMaterial")
-					if originalMaterial then part.Material = originalMaterial end
-					if part.Parent:FindFirstChild("Humanoid") then
-						for _, track in pairs(part.Parent.Humanoid:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end
-					end
-				end
-			end
-		end
-	elseif varName == "AutoRight" and newState then
-		FeatureElements["AutoLeft"].ToggleBtn.MouseButton1Click:Fire() -- Desactivar el otro
-	elseif varName == "AutoLeft" and newState then
-		FeatureElements["AutoRight"].ToggleBtn.MouseButton1Click:Fire() -- Desactivar el otro
-	end
-end
-
-function HandleJumpModeLogic(mode)
-	local humanoid = LocalPlayer.Character.Humanoid
-	if mode == "Manual" then
-		-- Saltar 1x1 es el comportamiento por defecto de Roblox
-	elseif mode == "Hold" then
-		-- Lógica implementada en JumpRequest
-	end
-end
-
--- Inicialización
-SwitchCategory("Speed") -- Cargar categoría por defecto
-workspace.CurrentCamera.FieldOfView = Variables.POV
-
+notify(
+    "ZaryonHub cargado correctamente"
+)
